@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Token.sol";
@@ -98,16 +98,11 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable{
     }
 
 
-    function transferLand(int x, int y, address _to) external canTransfer(_encodeTokenId(x,y)) {
+    // only the owner of token can transfer
+    function transferLand(int x, int y, address _to) external {
         uint256 _tokenId = _encodeTokenId(x,y);
         address _from = tokenOwner[_tokenId];
-        require(_from != address(0));
-        require(_to != address(0));
-
-        clearApproval(_from, _tokenId);
-        removeTokenFrom(_from, _tokenId);
-        addTokenTo(_to, _tokenId);
-        require(checkAndCallSafeTransfer(_from, _to, _tokenId, ""));
+        safeTransferFrom(_from, _to, _tokenId);
 
         emit LandTrasferred(x, y, _from, _to);
     }
