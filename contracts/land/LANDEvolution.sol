@@ -5,7 +5,7 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721Token.sol";
 
 
 // TODO:
-contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable{
+contract LANDEvolution is ERC721Token("Evolution Land Oasis","EVOLAND"), Ownable{
 
     uint256 constant clearLow = 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000;
     uint256 constant clearHigh = 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
