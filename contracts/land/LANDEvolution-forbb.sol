@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Token.sol";
@@ -15,49 +15,48 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable{
      * EVENT
      */
 
-    event LandTrasferred(int64 indexed x, int64 indexed y, address indexed from, address to);
+    event LandTrasferred(int indexed x, int indexed y, address indexed from, address to);
 
     /*
      * FUNCTION
      */
 
-    function assignNewLand(int64 x, int64 y, address beneficiary) external onlyOwner {
+    function assignNewLand(int x, int y, address beneficiary) external onlyOwner {
         _mint(beneficiary, _encodeTokenId(x, y));
     }
 
-    function assignMultipleLands(int64[] x, int64[] y, address beneficiary) external onlyOwner {
+    function assignMultipleLands(int[] x, int[] y, address beneficiary) external onlyOwner {
         for (uint i = 0; i < x.length; i++) {
             _mint(beneficiary, _encodeTokenId(x[i], y[i]));
         }
     }
 
     // encode
-    function _encodeTokenId(int64 x, int64 y) pure internal returns (uint result) {
+    function _encodeTokenId(int x, int y) pure internal returns (uint result) {
         require(-90 < x && x < 90 && -90 < y && y < 90);
         return _unsafeEncodeTokenId(x, y);
     }
-    function _unsafeEncodeTokenId(int64 x, int64 y) pure internal returns (uint) {
+    function _unsafeEncodeTokenId(int x, int y) pure internal returns (uint) {
         return ((uint(x) * factor) & clearLow) | (uint(y) & clearHigh);
     }
 
     // decode
-    function decodeTokenId(uint value) pure external returns (int[]) {
-        return _decodeTokenId(value);
+    function decodeTokenId(uint value) pure external returns (int[] location) {
+        int x;
+        int y;
+        (x, y) = _decodeTokenId(value);
+        location.push(x);
+        location.push(y);
     }
 
-    function _decodeTokenId(uint value) pure internal returns (int[] location) {
-        int[] location = _unsafeDecodeTokenId(value);
-        int x = location[0];
-        int y = location[1];
+    function _decodeTokenId(uint value) pure internal returns (int x, int y) {
+        (x, y) = _unsafeDecodeTokenId(value);
         require(-90 < x && x < 90 && -90 < y && y < 90);
     }
 
-    function _unsafeDecodeTokenId(uint value) pure internal returns (int[] location) {
-        int x = expandNegative128BitCast((value & clearLow) >> 128);
-        int y = expandNegative128BitCast(value & clearHigh);
-        location.push(x);
-        location.push(y);
-
+    function _unsafeDecodeTokenId(uint value) pure internal returns (int x, int y) {
+        x = expandNegative128BitCast((value & clearLow) >> 128);
+        y = expandNegative128BitCast(value & clearHigh);
     }
 
     function expandNegative128BitCast(uint value) pure internal returns (int) {
@@ -103,16 +102,11 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable{
     }
 
 
-    function transferLand(int x, int y, address _to) external canTransfer(_encodeTokenId(x,y)) {
+    // only the owner of token can transfer
+    function transferLand(int x, int y, address _to) external {
         uint256 _tokenId = _encodeTokenId(x,y);
         address _from = tokenOwner[_tokenId];
-        require(_from != address(0));
-        require(_to != address(0));
-
-        clearApproval(_from, _tokenId);
-        removeTokenFrom(_from, _tokenId);
-        addTokenTo(_to, _tokenId);
-        require(checkAndCallSafeTransfer(_from, _to, _tokenId, ""));
+        safeTransferFrom(_from, _to, _tokenId);
 
         emit LandTrasferred(x, y, _from, _to);
     }
