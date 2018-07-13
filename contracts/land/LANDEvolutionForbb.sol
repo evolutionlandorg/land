@@ -41,12 +41,14 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable{
     }
 
     // decode
-    function decodeTokenId(uint value) pure external returns (int[] memory location) {
+    function decodeTokenId(uint value) pure external returns (int[]) {
         int x;
         int y;
+        int[] memory location;
         (x, y) = _decodeTokenId(value);
         location[0] = x;
         location[1] = y;
+        return location;
 
     }
 
