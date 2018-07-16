@@ -15,7 +15,7 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable{
      * EVENT
      */
 
-    event LandTrasferred(int indexed x, int indexed y, address indexed from, address to);
+    event LandTransferred(int indexed x, int indexed y, address indexed from, address to);
 
     /*
      * FUNCTION
@@ -104,7 +104,7 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable{
         address _from = tokenOwner[_tokenId];
         safeTransferFrom(_from, _to, _tokenId);
 
-        emit LandTrasferred(x, y, _from, _to);
+        emit LandTransferred(x, y, _from, _to);
     }
 
 
