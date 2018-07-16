@@ -11,11 +11,7 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable{
     uint256 constant clearHigh = 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
     uint256 constant factor = 0x100000000000000000000000000000000;
 
-    /*
-     * EVENT
-     */
 
-    event LandTransferred(int indexed x, int indexed y, address indexed from, address to);
 
     /*
      * FUNCTION
@@ -95,16 +91,6 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable{
         }
 
         return (x, y);
-    }
-
-
-    // only the owner of token can transfer
-    function transferLand(int x, int y, address _to) external {
-        uint256 _tokenId = _encodeTokenId(x,y);
-        address _from = tokenOwner[_tokenId];
-        safeTransferFrom(_from, _to, _tokenId);
-
-        emit LandTransferred(x, y, _from, _to);
     }
 
 
