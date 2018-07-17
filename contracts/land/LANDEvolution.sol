@@ -93,6 +93,10 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable{
         return (x, y);
     }
 
+    function IndexOfLand(uint _tokenId) public view returns (uint index) {
+        index = allTokensIndex[_tokenId];
+    }
+
 
 
 
