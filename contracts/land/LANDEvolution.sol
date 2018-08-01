@@ -110,7 +110,8 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable{
     ) onlyOwnerOf(_tokenId) public {
         // set _to to the auction contract
         approve(_to, _tokenId);
-        if(!_to.receiveApproval(msg.sender, _tokenId, _startingPriceInRING, _endingPriceInRING, _duration, _seller)) {
+        if(!_to.call(bytes4(keccak256("receiveApproval(address,uint256,uint256,uint256,uint256,address)")),
+            msg.sender, _tokenId, _startingPriceInRING, _endingPriceInRING, _duration, _seller)) {
             revert();
         }
 
