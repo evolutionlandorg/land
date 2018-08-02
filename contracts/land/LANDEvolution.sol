@@ -11,11 +11,7 @@ contract LANDEvolution is ERC721Token("Evolution Land Oasis","EVOLAND"), Ownable
     uint256 constant clearHigh = 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
     uint256 constant factor = 0x100000000000000000000000000000000;
 
-    /*
-     * EVENT
-     */
 
-    event LandTrasferred(int indexed x, int indexed y, address indexed from, address to);
 
     /*
      * FUNCTION
@@ -97,14 +93,25 @@ contract LANDEvolution is ERC721Token("Evolution Land Oasis","EVOLAND"), Ownable
         return (x, y);
     }
 
+    function indexOfLand(uint _tokenId) public view returns (uint index) {
+        index = allTokensIndex[_tokenId];
+    }
 
-    // only the owner of token can transfer
-    function transferLand(int x, int y, address _to) external {
-        uint256 _tokenId = _encodeTokenId(x,y);
-        address _from = tokenOwner[_tokenId];
-        safeTransferFrom(_from, _to, _tokenId);
+    //@dev user invoke approveAndCall to create auction
+    //@param _to - address of auction contractß
 
-        emit LandTrasferred(x, y, _from, _to);
+    function approveAndCall(
+        address _to,
+        uint _tokenId,
+        bytes _extraData
+    ) onlyOwnerOf(_tokenId) public {
+        // set _to to the auction contract
+        approve(_to, _tokenId);
+        if(!_to.call(bytes4(keccak256("receiveApproval(address,uint256,bytes)")),
+            abi.encode(msg.sender, _tokenId, _extraData))) {
+            revert();
+        }
+
     }
 
 

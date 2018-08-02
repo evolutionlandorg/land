@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "openzeppelin-solidity": "^1.11.0-rc.1",
-    "truffle-hdwallet-provider": "0.0.5"
+    "truffle-hdwallet-provider": "0.0.5",
+    "truffle-privatekey-provider": "^0.1.0"
   },
   "devDependencies": {},
   "scripts": {

@@ -1,4 +1,4 @@
-var LandAsset = artifacts.require("./contracts/LandEvolution.sol");
+var LandAsset = artifacts.require("LANDEvolution");
 
 module.exports = function(deployer) {
     deployer.deploy(LandAsset);
