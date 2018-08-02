@@ -1,7 +1,7 @@
 {
-  "name": "land",
+  "name": "evolutionland",
   "version": "1.0.0",
-  "description": "Contracts for Land",
+  "description": "Land Contracts for Evolution Land",
   "main": "truffle-config.js",
   "directories": {
     "test": "test"
