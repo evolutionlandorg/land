@@ -2,16 +2,10 @@ pragma solidity ^0.4.24;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Token.sol";
+import "./LANDbase.sol";
 
 
-// TODO:
-contract LANDEvolution is ERC721Token("Evolution Land Oasis","EVOLAND"), Ownable{
-
-    uint256 constant clearLow = 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000;
-    uint256 constant clearHigh = 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
-    uint256 constant factor = 0x100000000000000000000000000000000;
-
-
+contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable, LANDbase{
 
     /*
      * FUNCTION
@@ -27,35 +21,9 @@ contract LANDEvolution is ERC721Token("Evolution Land Oasis","EVOLAND"), Ownable
         }
     }
 
-    // encode
-    function _encodeTokenId(int x, int y) pure internal returns (uint result) {
-        require(-90 < x && x < 90 && -90 < y && y < 90);
-        return _unsafeEncodeTokenId(x, y);
-    }
-    function _unsafeEncodeTokenId(int x, int y) pure internal returns (uint) {
-        return ((uint(x) * factor) & clearLow) | (uint(y) & clearHigh);
-    }
-
     // decode
     function decodeTokenId(uint value) pure external returns (int, int) {
         return _decodeTokenId(value);
-    }
-
-    function _decodeTokenId(uint value) pure internal returns (int x, int y) {
-        (x, y) = _unsafeDecodeTokenId(value);
-        require(-90 < x && x < 90 && -90 < y && y < 90);
-    }
-
-    function _unsafeDecodeTokenId(uint value) pure internal returns (int x, int y) {
-        x = expandNegative128BitCast((value & clearLow) >> 128);
-        y = expandNegative128BitCast(value & clearHigh);
-    }
-
-    function expandNegative128BitCast(uint value) pure internal returns (int) {
-        if (value & (1<<127) != 0) {
-            return int(value | clearLow);
-        }
-        return int(value);
     }
 
     function exists(int x, int y) view external returns (bool) {
