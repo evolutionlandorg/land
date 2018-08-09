@@ -20,7 +20,6 @@ contract LANDdata is Ownable, LANDbase{
     mapping(uint256 => LandPixel) tokenId2LandPixel;
 
     function addLandPixel(
-        uint256 _tokenId,
         int _x,
         int _y,
         int _z,
@@ -29,7 +28,7 @@ contract LANDdata is Ownable, LANDbase{
         uint64 _waterRate,
         uint64 _fireRate,
         uint64 _soilRate,
-        bool _isReserved)
+        bytes _isReserved)
     public onlyOwner {
         LandPixel memory landPixel = LandPixel(_x,_y,_z,_goldRate,_woodRate,_waterRate,_fireRate,_soilRate,_isReserved);
         uint tokenId = _encodeTokenId(_x,_y);

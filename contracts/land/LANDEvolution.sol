@@ -5,9 +5,7 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721Token.sol";
 import "./LANDbase.sol";
 
 
-// TODO:
 contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable, LANDbase{
-
 
     /*
      * FUNCTION
@@ -83,10 +81,6 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable, LANDbase{
         }
 
     }
-
-
-
-
 
 
 }
