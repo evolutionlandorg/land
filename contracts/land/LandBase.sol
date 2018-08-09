@@ -1,6 +1,6 @@
 pragma solidity ^0.4.23;
 
-contract LANDbase {
+contract LandBase {
 
     uint256 constant clearLow = 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000;
     uint256 constant clearHigh = 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;

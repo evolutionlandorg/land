@@ -2,10 +2,9 @@ pragma solidity ^0.4.24;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Token.sol";
-import "./LANDbase.sol";
+import "./LandBase.sol";
 
-
-contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable, LANDbase{
+contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase{
 
     /*
      * FUNCTION
@@ -44,16 +43,16 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable, LANDbase{
         }
     }
 
-    function landOf(address landholder) external view returns (int[], int[]) {
-        require(landholder == msg.sender);
-        uint256 length = balanceOf(landholder);
+    function landOf(address _landholder) external view returns (int[], int[]) {
+        require(_landholder == msg.sender);
+        uint256 length = balanceOf(_landholder);
         int[] memory x = new int[](length);
         int[] memory y = new int[](length);
 
         int landX;
         int landY;
         for(uint i = 0; i < length; i++) {
-            (landX, landY) = _decodeTokenId(ownedTokens[landholder][i]);
+            (landX, landY) = _decodeTokenId(ownedTokens[_landholder][i]);
             x[i] = landX;
             y[i] = landY;
         }
@@ -67,7 +66,6 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable, LANDbase{
 
     //@dev user invoke approveAndCall to create auction
     //@param _to - address of auction contractß
-
     function approveAndCall(
         address _to,
         uint _tokenId,
@@ -81,6 +79,5 @@ contract LANDEvolution is ERC721Token("OASIS","EVL"), Ownable, LANDbase{
         }
 
     }
-
 
 }

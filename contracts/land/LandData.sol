@@ -1,9 +1,9 @@
 pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "./LANDbase.sol";
+import "./LandBase.sol";
 
-contract LANDdata is Ownable, LANDbase{
+contract LandData is Ownable, LandBase{
 
     struct LandPixel {
         int x;  // position on the x-axis
@@ -31,13 +31,15 @@ contract LANDdata is Ownable, LANDbase{
         bytes _isReserved)
     public onlyOwner {
         LandPixel memory landPixel = LandPixel(_x,_y,_z,_goldRate,_woodRate,_waterRate,_fireRate,_soilRate,_isReserved);
+
+        // TODO: move encode token id outside of the contract
         uint tokenId = _encodeTokenId(_x,_y);
         tokenId2LandPixel[tokenId] = landPixel;
     }
 
     function getPixelResources(int _x, int _y) public view returns (uint64,uint64,uint64,uint64,uint64,bool) {
         uint256 tokenId = _encodeTokenId(_x, _y);
-        LandPixel landPixel = tokenId2LandPixel[tokenId];
+        LandPixel storage landPixel = tokenId2LandPixel[tokenId];
         return (landPixel.goldRate,
                 landPixel.woodRate,
                 landPixel.waterRate,
