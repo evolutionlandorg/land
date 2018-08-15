@@ -4,46 +4,58 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Token.sol";
 import "./LandBase.sol";
 
-contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase{
+contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase {
+
+
+    modifier xRangeLimit(int _x) {
+        require( _x >= -112 &&  _x <= -68);
+        _;
+    }
+
+    modifier yRangeLimit(int _y) {
+        require(_y >= -22 && _y <= 22);
+        _;
+    }
 
     /*
      * FUNCTION
      */
 
-    function assignNewLand(int x, int y, address beneficiary) external onlyOwner {
-        _mint(beneficiary, _encodeTokenId(x, y));
+    function assignNewLand(int _x, int _y, address beneficiary) public onlyOwner xRangeLimit(_x) yRangeLimit(_y) {
+        _mint(beneficiary, _encodeTokenId(_x, _y));
     }
 
-    function assignMultipleLands(int[] x, int[] y, address beneficiary) external onlyOwner {
-        for (uint i = 0; i < x.length; i++) {
-            _mint(beneficiary, _encodeTokenId(x[i], y[i]));
+    function assignMultipleLands(int[] _xs, int[] _ys, address _beneficiary) public onlyOwner {
+        require(_xs.length == _ys.length, "assignMultipleLands failed because length of xs didnt match length of ys");
+        for (uint i = 0; i < _xs.length; i++) {
+            assignNewLand(_xs[i], _ys[i], _beneficiary);
         }
     }
 
     // decode
-    function decodeTokenId(uint value) pure external returns (int, int) {
-        return _decodeTokenId(value);
+    function decodeTokenId(uint _value) pure public returns (int, int) {
+        return _decodeTokenId(_value);
     }
 
-    function exists(int x, int y) view external returns (bool) {
-        return super.exists(_encodeTokenId(x, y));
+    function exists(int _x, int _y) view public returns (bool) {
+        return super.exists(_encodeTokenId(_x, _y));
     }
 
-    function ownerOfLand(int x, int y) view public returns (address) {
-        return super.ownerOf(_encodeTokenId(x, y));
+    function ownerOfLand(int _x, int _y) view public returns (address) {
+        return super.ownerOf(_encodeTokenId(_x, _y));
     }
 
-    function ownerOfLandMany(int[] x, int[] y) view public returns (address[]) {
-        require(x.length > 0);
-        require(x.length == y.length);
+    function ownerOfLandMany(int[] _xs, int[] _ys) view public returns (address[]) {
+        require(_xs.length > 0);
+        require(_xs.length == _ys.length);
 
-        address[] memory addrs = new address[](x.length);
-        for (uint i = 0; i < x.length; i++) {
-            addrs[i] = ownerOfLand(x[i], y[i]);
+        address[] memory addrs = new address[](_xs.length);
+        for (uint i = 0; i < _xs.length; i++) {
+            addrs[i] = ownerOfLand(_xs[i], _ys[i]);
         }
     }
 
-    function landOf(address _landholder) external view returns (int[], int[]) {
+    function landOf(address _landholder) public view returns (int[], int[]) {
         require(_landholder == msg.sender);
         uint256 length = balanceOf(_landholder);
         int[] memory x = new int[](length);
