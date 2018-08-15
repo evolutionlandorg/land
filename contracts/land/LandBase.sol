@@ -2,34 +2,32 @@ pragma solidity ^0.4.23;
 
 contract LandBase {
 
-    uint256 constant clearLow = 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000;
-    uint256 constant clearHigh = 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
-    uint256 constant factor = 0x100000000000000000000000000000000;
+    uint256 constant CLEAR_LOW = 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000;
+    uint256 constant CLEAR_HIGH = 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
+    uint256 constant FACTOR = 0x100000000000000000000000000000000;
 
     // encode
-    function _encodeTokenId(int x, int y) pure internal returns (uint result) {
-        require(-90 < x && x < 90 && -90 < y && y < 90);
-        return _unsafeEncodeTokenId(x, y);
+    function _encodeTokenId(int _x, int _y) pure internal returns (uint result) {
+        return _unsafeEncodeTokenId(_x, _y);
     }
-    function _unsafeEncodeTokenId(int x, int y) pure internal returns (uint) {
-        return ((uint(x) * factor) & clearLow) | (uint(y) & clearHigh);
-    }
-
-    function _decodeTokenId(uint value) pure internal returns (int x, int y) {
-        (x, y) = _unsafeDecodeTokenId(value);
-        require(-90 < x && x < 90 && -90 < y && y < 90);
+    function _unsafeEncodeTokenId(int _x, int _y) pure internal returns (uint) {
+        return ((uint(_x) * FACTOR) & CLEAR_LOW) | (uint(_y) & CLEAR_HIGH);
     }
 
-    function _unsafeDecodeTokenId(uint value) pure internal returns (int x, int y) {
-        x = expandNegative128BitCast((value & clearLow) >> 128);
-        y = expandNegative128BitCast(value & clearHigh);
+    function _decodeTokenId(uint _value) pure internal returns (int x, int y) {
+        (x, y) = _unsafeDecodeTokenId(_value);
     }
 
-    function expandNegative128BitCast(uint value) pure internal returns (int) {
-        if (value & (1<<127) != 0) {
-            return int(value | clearLow);
+    function _unsafeDecodeTokenId(uint _value) pure internal returns (int x, int y) {
+        x = expandNegative128BitCast((_value & CLEAR_LOW) >> 128);
+        y = expandNegative128BitCast(_value & CLEAR_HIGH);
+    }
+
+    function expandNegative128BitCast(uint _value) pure internal returns (int) {
+        if (_value & (1<<127) != 0) {
+            return int(_value | CLEAR_LOW);
         }
-        return int(value);
+        return int(_value);
     }
 
 }
