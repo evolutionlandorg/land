@@ -26,7 +26,7 @@ contract LandData is Ownable {
      * LandInfo[130,130] : hasBox
      * LandInfo[131,255] : not open yet
     */
-    uint256 LandInfo;
+    //uint256 LandInfo;
 
 
     mapping(uint256 => uint256) tokenId2Attributes;
