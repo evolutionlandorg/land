@@ -123,6 +123,10 @@ contract LandData is Ownable {
         return rightShift;
     }
 
+    // helper
+    function encodeTokenId(int _x, int _y) pure public returns (uint) {
+        return _unsafeEncodeTokenId(_x, _y);
+    }
 
     function _encodeTokenId(int _x, int _y) pure internal returns (uint) {
         return _unsafeEncodeTokenId(_x, _y);
