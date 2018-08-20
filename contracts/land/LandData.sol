@@ -1,103 +1,156 @@
 pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "./LandBase.sol";
 
-contract LandData is Ownable, LandBase {
+contract LandData is Ownable {
 
-    struct LandPixel {
-        int64 x;  // position on the x-axis
-        int64 y;  // position on the y-axis
-        int64 z;  // position on the z-axis
-        uint64 goldRate; // maximum of gold's generation per pixel and per day
-        uint64 woodRate;
-        uint64 waterRate;
-        uint64 fireRate;
-        uint64 soilRate;
-        // consider flag a binary array with the index starting at 0.
-        // the rightmost one is the 0th element and the leftmost one is 255th element.
-        // from the right to the left:
-        // flag[0] - is this land reserved. 1 for reserved and 0 for not reserved.
-        // flag[1] - is the land special. special here means that you can not buy it with RING or KTON
+    uint256 constant CLEAR_LOW = 0xffff0000;
+    uint256 constant CLEAR_HIGH = 0x0000ffff;
+    uint256 constant FACTOR = 0x10000;
 
-        uint256 flag;
+    /**
+     * @dev LandInfo contains attibutes of Land asset.
+     * consider LandInfo a binary array with the index starting at 0.
+     * the rightmost one is the 0th element and the leftmost one is 255th element.
+     * from the right to the left:
+     * LandInfo[0,15] : y
+     * LandInfo[16,31] : x
+     * LandInfo[32,47] : z
+     * LandInfo[48,63] : goldrate
+     * LandInfo[64,79] : woodrate
+     * LandInfo[80,95] : waterrate
+     * LandInfo[96,111] : firerate
+     * LandInfo[112,127] : soilrate
+     * LandInfo[128,128] : isReserved
+     * LandInfo[129,129] : isSpecial
+     * LandInfo[130,130] : hasBox
+     * LandInfo[131,255] : not open yet
+    */
+    uint256 LandInfo;
+
+
+    mapping(uint256 => uint256) tokenId2Attributes;
+
+
+    function addLandPixel(uint256 _tokenId, uint256 _landAttribute) public onlyOwner {
+        require(_landAttribute != 0);
+        require(tokenId2Attributes[_tokenId] == 0);
+        tokenId2Attributes[_tokenId] = _landAttribute;
     }
 
-    mapping(uint256 => LandPixel) tokenId2LandPixel;
-
-    function addLandPixel(
-        int64 _x,
-        int64 _y,
-        int64 _z,
-        uint64 _goldRate,
-        uint64 _woodRate,
-        uint64 _waterRate,
-        uint64 _fireRate,
-        uint64 _soilRate,
-        uint256 _flag)
-    public onlyOwner {
-        LandPixel memory landPixel = LandPixel(_x,_y,_z,_goldRate,_woodRate,_waterRate,_fireRate,_soilRate,_flag);
-
-        // TODO: move encode token id outside of the contract
-        uint tokenId = _encodeTokenId(_x,_y);
-        tokenId2LandPixel[tokenId] = landPixel;
+    function batchAdd(uint256[] _tokenIds, uint256[] _landAttributes) public onlyOwner {
+        require(_tokenIds.length == _landAttributes.length);
+        uint length = _tokenIds.length;
+        for (uint i = 0; i < length; i++) {
+            addLandPixel(_tokenIds[i], _landAttributes[i]);
+        }
     }
 
-    function getPixelInfoWithPosition(int64 _x, int64 _y)
-    public
-    view
-    returns (uint64,uint64,uint64,uint64,uint64,uint256) {
-        uint256 tokenId = _encodeTokenId(_x, _y);
-        LandPixel storage landPixel = tokenId2LandPixel[tokenId];
-        return (landPixel.goldRate,
-                landPixel.woodRate,
-                landPixel.waterRate,
-                landPixel.fireRate,
-                landPixel.soilRate,
-                landPixel.flag);
+    function getXY(uint _tokenId) public view returns (int16 x, int16 y) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        // get x and y
+        uint position = getInfoFromAttibutes(landInfo, 0, 31);
+        (x, y) = _decodeTokenId(position);
     }
 
-    function getPixelInfoWithTokenId(uint256 _tokenId)
-    public
-    view
-    returns (int64,int64,int64,uint64,uint64,uint64,uint64,uint64,uint256) {
-        LandPixel storage landPixel = tokenId2LandPixel[_tokenId];
-        return (
-            landPixel.x,
-            landPixel.y,
-            landPixel.z,
-            landPixel.goldRate,
-            landPixel.woodRate,
-            landPixel.waterRate,
-            landPixel.fireRate,
-            landPixel.soilRate,
-            landPixel.flag);
+
+    function modifyAttibutes(uint _tokenId, uint _right, uint _left, uint _newValue) public onlyOwner {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        uint newValue = _modifyInfoFromAttibutes(landInfo, _right, _left, _newValue);
+        tokenId2Attributes[_tokenId] = newValue;
     }
+
+    function getGoldRate(uint _tokenId) public view returns (uint) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        return (getInfoFromAttibutes(landInfo, 48, 63));
+    }
+
+    function getWoodRate(uint _tokenId) public view returns (uint) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        return (getInfoFromAttibutes(landInfo, 64, 79));
+    }
+
+    function getWaterRate(uint _tokenId) public view returns (uint) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        return (getInfoFromAttibutes(landInfo, 80, 95));
+    }
+
+    function getFireRate(uint _tokenId) public view returns (uint) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        return (getInfoFromAttibutes(landInfo, 96, 111));
+    }
+
+    function getSoilRate(uint _tokenId) public view returns (uint) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        return (getInfoFromAttibutes(landInfo, 112, 127));
+    }
+
+
+    function isReserved(uint256 _tokenId) public view returns (bool) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        return (getInfoFromAttibutes(landInfo, 128, 128) == 1);
+    }
+
+    function isSpecial(uint256 _tokenId) public view returns (bool) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        return (getInfoFromAttibutes(landInfo, 129, 129) == 1);
+    }
+
+    function hasBox(uint256 _tokenId) public view returns (bool) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        return (getInfoFromAttibutes(landInfo, 130, 130) == 1);
+    }
+
+
+    function _modifyInfoFromAttibutes(uint256 _attibutes, uint _rightAt, uint _leftAt, uint _value) internal returns (uint) {
+        uint emptyTarget = (_attibutes >> _leftAt) << _leftAt;
+        uint newValue = _value << _rightAt;
+        return (emptyTarget + newValue);
+    }
+
 
     /**
     * @dev get specific snippet of info from _flag
-    * @param _flag - LandPixel.flag
+    * @param _attibutes - LandPixel.flag
     * @param _rightAt - where the snippet start from the right
     * @param _leftAt - where the snippet end to the left
     * for example, uint(000...010100), because of the index starting at 0.
     * the '101' part's _rightAt is 2, and _leftAt is 4.
     */
-    function getInfoFromFlag(uint256 _flag, uint _rightAt, uint _leftAt) public returns (uint) {
-        uint leftShift = _flag << (255 - _leftAt);
+    function getInfoFromAttibutes(uint256 _attibutes, uint _rightAt, uint _leftAt) public returns (uint) {
+        uint leftShift = _attibutes << (255 - _leftAt);
         uint rightShift = leftShift >> (_rightAt + 255 - _leftAt);
         return rightShift;
     }
 
-    function isReserved(uint256 _tokenId) public returns (bool) {
-        LandPixel storage landPixel = tokenId2LandPixel[_tokenId];
-        uint flag = landPixel.flag;
-        return (getInfoFromFlag(flag,0,0) == 1);
+
+    function _encodeTokenId(int _x, int _y) pure internal returns (uint) {
+        return _unsafeEncodeTokenId(_x, _y);
     }
 
-    function isSpecial(uint256 _tokenId) public returns (bool) {
-        LandPixel storage landPixel = tokenId2LandPixel[_tokenId];
-        uint flag = landPixel.flag;
-        return (getInfoFromFlag(flag,1,1) == 1);
+    function _unsafeEncodeTokenId(int _x, int _y) pure internal returns (uint) {
+        return ((uint(_x) * FACTOR) & CLEAR_LOW) | (uint(_y) & CLEAR_HIGH);
     }
+
+    function _decodeTokenId(uint _value) pure internal returns (int16 x, int16 y) {
+        (x, y) = _unsafeDecodeTokenId(_value);
+    }
+
+    function _unsafeDecodeTokenId(uint _value) pure internal returns (int16 x, int16 y) {
+        x = expandNegative128BitCast((_value & CLEAR_LOW) >> 16);
+        y = expandNegative128BitCast(_value & CLEAR_HIGH);
+    }
+
+    function expandNegative128BitCast(uint _value) pure internal returns (int16) {
+        if (_value & (1 << 15) != 0) {
+            return int16(_value | CLEAR_LOW);
+        }
+        return int16(_value);
+    }
+
+
+
+
+
 
 }
