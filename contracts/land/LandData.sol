@@ -69,6 +69,19 @@ contract LandData is Ownable {
         tokenId2Attributes[_tokenId] = newValue;
     }
 
+    function getResourcesFromInfo(uint _tokenId)
+    public
+    view
+    returns (uint goldRate, uint woodRate, uint waterRate, uint fireRate, uint soilRate) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        goldRate = getInfoFromAttibutes(landInfo, 48, 63);
+        woodRate = getInfoFromAttibutes(landInfo, 64, 79);
+        waterRate = getInfoFromAttibutes(landInfo, 80, 95);
+        fireRate = getInfoFromAttibutes(landInfo, 96, 111);
+        soilRate = getInfoFromAttibutes(landInfo, 112, 127);
+    }
+
+
     function getGoldRate(uint _tokenId) public view returns (uint) {
         uint landInfo = tokenId2Attributes[_tokenId];
         return (getInfoFromAttibutes(landInfo, 48, 63));
@@ -137,7 +150,9 @@ contract LandData is Ownable {
     }
 
     // helper
-    function encodeTokenId(int _x, int _y) pure public returns (uint) {
+    // encodeTokenIdForInfo is only used for computing
+    // uint16(tokenId) in LandInfo
+    function encodeTokenIdForInfo(int _x, int _y) pure public returns (uint) {
         return _unsafeEncodeTokenId(_x, _y);
     }
 
