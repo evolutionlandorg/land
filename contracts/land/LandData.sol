@@ -65,7 +65,7 @@ contract LandData is Ownable {
         // unboxing will change resources on each land
         require( msg.sender == owner || msg.sender == rewardBox);
         uint landInfo = tokenId2Attributes[_tokenId];
-        uint newValue = _modifyInfoFromAttibutes(landInfo, _right, _left, _newValue);
+        uint newValue = _getModifyInfoFromAttibutes(landInfo, _right, _left, _newValue);
         tokenId2Attributes[_tokenId] = newValue;
     }
 
@@ -124,7 +124,7 @@ contract LandData is Ownable {
     }
 
 
-    function _modifyInfoFromAttibutes(uint256 _attibutes, uint _rightAt, uint _leftAt, uint _value) internal returns (uint) {
+    function _getModifyInfoFromAttibutes(uint256 _attibutes, uint _rightAt, uint _leftAt, uint _value) internal pure returns (uint) {
         uint emptyTarget = (_attibutes >> _leftAt) << _leftAt;
         uint newValue = _value << _rightAt;
         return (emptyTarget + newValue);
@@ -139,7 +139,7 @@ contract LandData is Ownable {
     * for example, uint(000...010100), because of the index starting at 0.
     * the '101' part's _rightAt is 2, and _leftAt is 4.
     */
-    function getInfoFromAttibutes(uint256 _attibutes, uint _rightAt, uint _leftAt) public returns (uint) {
+    function getInfoFromAttibutes(uint256 _attibutes, uint _rightAt, uint _leftAt) public pure returns (uint) {
         uint leftShift = _attibutes << (255 - _leftAt);
         uint rightShift = leftShift >> (_rightAt + 255 - _leftAt);
         return rightShift;
