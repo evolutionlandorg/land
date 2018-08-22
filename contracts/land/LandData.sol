@@ -8,6 +8,9 @@ contract LandData is Ownable {
     uint256 constant CLEAR_HIGH = 0x0000ffff;
     uint256 constant FACTOR = 0x10000;
 
+    // address of rewardBox
+    address public rewardBox;
+
     /**
      * @dev LandInfo contains attibutes of Land asset.
      * consider LandInfo a binary array with the index starting at 0.
@@ -29,7 +32,11 @@ contract LandData is Ownable {
     //uint256 LandInfo;
 
 
-    mapping(uint256 => uint256) tokenId2Attributes;
+    mapping(uint256 => uint256) public tokenId2Attributes;
+
+    constructor(address _rewardBox) public {
+        rewardBox = _rewardBox;
+    }
 
 
     function addLandPixel(uint256 _tokenId, uint256 _landAttribute) public onlyOwner {
@@ -54,7 +61,9 @@ contract LandData is Ownable {
     }
 
 
-    function modifyAttibutes(uint _tokenId, uint _right, uint _left, uint _newValue) public onlyOwner {
+    function modifyAttibutes(uint _tokenId, uint _right, uint _left, uint _newValue) public {
+        // unboxing will change resources on each land
+        require( msg.sender == owner || msg.sender == rewardBox);
         uint landInfo = tokenId2Attributes[_tokenId];
         uint newValue = _modifyInfoFromAttibutes(landInfo, _right, _left, _newValue);
         tokenId2Attributes[_tokenId] = newValue;
@@ -121,6 +130,10 @@ contract LandData is Ownable {
         uint leftShift = _attibutes << (255 - _leftAt);
         uint rightShift = leftShift >> (_rightAt + 255 - _leftAt);
         return rightShift;
+    }
+
+    function changeRewardBox(address _rewardBox) public onlyOwner {
+        rewardBox = _rewardBox;
     }
 
     // helper
