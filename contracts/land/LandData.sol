@@ -34,10 +34,6 @@ contract LandData is Ownable {
 
     mapping(uint256 => uint256) public tokenId2Attributes;
 
-    constructor(address _rewardBox) public {
-        rewardBox = _rewardBox;
-    }
-
 
     function addLandPixel(uint256 _tokenId, uint256 _landAttribute) public onlyOwner {
         require(_landAttribute != 0);
@@ -69,16 +65,29 @@ contract LandData is Ownable {
         tokenId2Attributes[_tokenId] = newValue;
     }
 
-    function getResourcesFromInfo(uint _tokenId)
+    // get every attibute from landInfo of certain tokenId(land pixel)
+    function getDetailsFromLandInfo(uint _tokenId)
     public
     view
-    returns (uint goldRate, uint woodRate, uint waterRate, uint fireRate, uint soilRate) {
+    returns (
+        uint goldRate,
+        uint woodRate,
+        uint waterRate,
+        uint fireRate,
+        uint soilRate,
+        bool isReserved,
+        bool isSpecial,
+        bool hasBox) {
         uint landInfo = tokenId2Attributes[_tokenId];
         goldRate = getInfoFromAttibutes(landInfo, 48, 63);
         woodRate = getInfoFromAttibutes(landInfo, 64, 79);
         waterRate = getInfoFromAttibutes(landInfo, 80, 95);
         fireRate = getInfoFromAttibutes(landInfo, 96, 111);
         soilRate = getInfoFromAttibutes(landInfo, 112, 127);
+        isReserved = getInfoFromAttibutes(landInfo, 128, 128) == 1;
+        isSpecial = getInfoFromAttibutes(landInfo, 129, 129) == 1;
+        hasBox = getInfoFromAttibutes(landInfo, 130, 130) == 1;
+
     }
 
 
