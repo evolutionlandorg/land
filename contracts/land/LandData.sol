@@ -159,9 +159,9 @@ contract LandData is Ownable {
     }
 
     // helper
-    // encodeTokenIdForInfo is only used for computing
-    // uint16(tokenId) in LandInfo
-    function encodeTokenIdForInfo(int _x, int _y) pure public returns (uint) {
+    // encodeXYPositionForInfo is only used for computing
+    // it stands landInfo[0,31]
+    function encodeXYPositionForInfo(int _x, int _y) pure public returns (uint) {
         return _unsafeEncodeTokenId(_x, _y);
     }
 

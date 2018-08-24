@@ -6,7 +6,6 @@ import "./LandBase.sol";
 
 contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase {
 
-
     modifier xRangeLimit(int _x) {
         require( _x >= -112 &&  _x <= -68);
         _;
