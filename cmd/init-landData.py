@@ -10,8 +10,8 @@ class LandData:
         # -112 <= x <= -68
         # -22 <= y <= 22
         # --
-        LandData_Contract = "0xb58bd9f8bd20332d885b4887449b228b8082da42"
-        Land_Contract = "0xcd0216736ab8514b1c0f7f2a6817c819c356fa0f"
+        LandData_ADDRESS = "0xb8897c52641991086abb4985ce5adb7bce032ae8"
+        Land_ADDRESS = "0x1a587212c0e35922ee79e4ff876c5e4e600fc877"
         ETH_RPC = "https://kovan.infura.io/ZWef2NOidUm5XooBYqgl"
         USER_ADDRESS = ""
         CREATE_PRI_KEY = ""
@@ -21,34 +21,30 @@ class LandData:
             landData_abi = json.load(landData_definition)
         with open('land.abi', 'r') as land_definition:
             land_abi = json.load(land_definition)
+        with open('resource.json', 'r') as resource_definition:
+            resource_json = json.load(resource_definition)
 
-        land_contract = w3.eth.contract(address=Land_Contract, abi=land_abi)
-        landData_contract = w3.eth.contract(address=LandData_Contract, abi=landData_abi)
         nonce = w3.eth.getTransactionCount(USER_ADDRESS),
         nonce = nonce[0]
-        count = 300
-        for i in range(count):
-            landIndex = i
+        for index, resource in enumerate(resource_json):
+            x = -112 + index % 45
+            y = 22 - index % 45
+            land_contract = w3.eth.contract(address=Land_ADDRESS, abi=land_abi)
             try:
-                landTokenId = land_contract.call().tokenByIndex(landIndex)
+                landTokenId = land_contract.call().encodeTokenId(x, y)
             except:
                 break
             else:
-                cood = land_contract.call().decodeTokenId(landTokenId)
-                x, y = cood[0], cood[1]
-                encodeTokenId = landData_contract.call().encodeTokenId(x, y)
-                goldRate, woodRate, waterRate, fireRate, soilRate = 1, 1, 1, 1, 1
-                isReserved = 1
-                isSpecial = 1
-                hasBox = 1
-                x = encodeTokenId + (goldRate << 48) + (woodRate << 64) + (waterRate << 80) + (fireRate << 96) + \
-                    (soilRate << 112) + (isReserved << 128) + (isSpecial << 129) + (hasBox << 130)
+                goldRate, woodRate, waterRate, fireRate, soilRate, isReserved = resource["gold"], resource["wood"], resource["water"], resource[
+                    "fire"], resource["earth"], resource["isSpecial"]
+                print(landTokenId, goldRate, woodRate, waterRate, fireRate, soilRate, isReserved)
+                x = goldRate + (woodRate << 16) + (waterRate << 32) + (fireRate << 48) + (soilRate << 64) + (isReserved << 80)
                 execute_transaction = "0x4d628d48" + self.u256ToInput(landTokenId) + self.u256ToInput(x)
                 tx = Transaction(
-                    nonce=nonce + i,
-                    gasprice=6000000000,
+                    nonce=nonce + index,
+                    gasprice=2000000000,
                     startgas=1000000,
-                    to=LandData_Contract,
+                    to=LandData_ADDRESS,
                     value=0,
                     data=w3.toBytes(hexstr=execute_transaction),
                 )
@@ -57,6 +53,7 @@ class LandData:
                 raw_tx_hex = w3.toHex(raw_tx)
                 tx = w3.eth.sendRawTransaction(raw_tx_hex)
                 print(tx)
+                break
 
     def pandding(self, format):
         if format.startswith('0x'):

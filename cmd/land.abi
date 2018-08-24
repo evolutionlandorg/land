@@ -424,11 +424,11 @@
       "constant": false,
       "inputs": [
         {
-          "name": "x",
+          "name": "_x",
           "type": "int256"
         },
         {
-          "name": "y",
+          "name": "_y",
           "type": "int256"
         },
         {
@@ -446,15 +446,15 @@
       "constant": false,
       "inputs": [
         {
-          "name": "x",
+          "name": "_xs",
           "type": "int256[]"
         },
         {
-          "name": "y",
+          "name": "_ys",
           "type": "int256[]"
         },
         {
-          "name": "beneficiary",
+          "name": "_beneficiary",
           "type": "address"
         }
       ],
@@ -468,7 +468,7 @@
       "constant": true,
       "inputs": [
         {
-          "name": "value",
+          "name": "_value",
           "type": "uint256"
         }
       ],
@@ -485,6 +485,29 @@
       ],
       "payable": false,
       "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_x",
+          "type": "int256"
+        },
+        {
+          "name": "_y",
+          "type": "int256"
+        }
+      ],
+      "name": "exists",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -510,34 +533,34 @@
       "constant": true,
       "inputs": [
         {
-          "name": "x",
+          "name": "_x",
           "type": "int256"
         },
         {
-          "name": "y",
+          "name": "_y",
           "type": "int256"
         }
       ],
-      "name": "exists",
+      "name": "encodeTokenId",
       "outputs": [
         {
           "name": "",
-          "type": "bool"
+          "type": "uint256"
         }
       ],
       "payable": false,
-      "stateMutability": "view",
+      "stateMutability": "pure",
       "type": "function"
     },
     {
       "constant": true,
       "inputs": [
         {
-          "name": "x",
+          "name": "_x",
           "type": "int256"
         },
         {
-          "name": "y",
+          "name": "_y",
           "type": "int256"
         }
       ],
@@ -556,11 +579,11 @@
       "constant": true,
       "inputs": [
         {
-          "name": "x",
+          "name": "_xs",
           "type": "int256[]"
         },
         {
-          "name": "y",
+          "name": "_ys",
           "type": "int256[]"
         }
       ],
@@ -579,7 +602,7 @@
       "constant": true,
       "inputs": [
         {
-          "name": "landholder",
+          "name": "_landholder",
           "type": "address"
         }
       ],
