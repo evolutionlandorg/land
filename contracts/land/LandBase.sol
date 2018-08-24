@@ -7,6 +7,11 @@ contract LandBase {
     uint256 constant FACTOR = 0x100000000000000000000000000000000;
 
     // encode
+
+    function encodeTokenId(int _x, int _y) pure public returns (uint result) {
+        return _encodeTokenId(_x, _y);
+    }
+
     function _encodeTokenId(int _x, int _y) pure internal returns (uint result) {
         return _unsafeEncodeTokenId(_x, _y);
     }
