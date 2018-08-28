@@ -17,7 +17,7 @@ contract LandGenesisData is Ownable {
      * LandResourceAttr[32,47] : waterrate
      * LandResourceAttr[48,63] : firerate
      * LandResourceAttr[64,79] : soilrate
-     * LandResourceAttr[80,95] : flag
+     * LandResourceAttr[80,95] : flag // 1:reserved, 2:special 3:hasBox
      * LandResourceAttr[96,255] : not open yet
     */
     //uint256 LandInfo;
@@ -41,12 +41,30 @@ contract LandGenesisData is Ownable {
     }
 
 
-    function modifyAttibutes(uint _tokenId, uint _right, uint _left, uint _newValue) public {
+    function modifyAttributes(uint _tokenId, uint _right, uint _left, uint _newValue) public {
         // unboxing will change resources on each land
         require( msg.sender == owner || msg.sender == rewardBox);
         uint landInfo = tokenId2Attributes[_tokenId];
         uint newValue = _getModifyInfoFromAttibutes(landInfo, _right, _left, _newValue);
         tokenId2Attributes[_tokenId] = newValue;
+    }
+
+    function hasBox(uint256 _tokenId) public view returns (bool) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        uint flag = getInfoFromAttibutes(landInfo, 80, 95);
+        return (flag == 3);
+    }
+
+    function isReserved(uint256 _tokenId) public view returns (bool) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        uint flag = getInfoFromAttibutes(landInfo, 80, 95);
+        return (flag == 1);
+    }
+
+    function isSpecial(uint256 _tokenId) public view returns (bool) {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        uint flag = getInfoFromAttibutes(landInfo, 80, 95);
+        return (flag == 2);
     }
 
     // get every attibute from landInfo of certain tokenId(land pixel)
