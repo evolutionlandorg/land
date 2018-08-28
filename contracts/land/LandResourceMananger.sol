@@ -2,18 +2,17 @@ pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./LandData.sol";
+import "./LandGenesisData.sol";
 import "./Atlantis.sol";
-import "./Container.sol";
 
 /**
  * @title LandResourceManager
  * @dev LandResourceManager that records the resources on Land, and resource releasing speed.
  */
-contract LandResourceManager is Ownable, Container {
+contract LandResourceManager is Ownable{
     using SafeMath for *;
 
-    LandData public landData;
+    LandGenesisData public landGenesisData;
     Atlantis public atlantis;
 
 
@@ -50,8 +49,8 @@ contract LandResourceManager is Ownable, Container {
 
     mapping (uint256 => UpdatedElementResource) public resourceBalance;
 
-    constructor(address _landData, address _atlantis, uint256 _resourceReleaseStartTime, address _gold, address _wood, address _hho, address _fire, address _sioo) public {
-        landData = LandData(_landData);
+    constructor(address _landGenesisData, address _atlantis, uint256 _resourceReleaseStartTime, address _gold, address _wood, address _hho, address _fire, address _sioo) public {
+        landGenesisData = LandGenesisData(_landGenesisData);
         atlantis = Atlantis(_atlantis);
         resourceReleaseStartTime = _resourceReleaseStartTime;
 
@@ -107,7 +106,7 @@ contract LandResourceManager is Ownable, Container {
     }
 
     function _getInitSpeedForLand(uint256 _tokenId, address _resourceToken) internal view returns (uint256 initSpeed) {
-        var (v_gold_init, v_wood_init, v_water_init, v_fire_init, v_soil_init, flag) = landData.getDetailsFromLandInfo(_tokenId);
+        var (v_gold_init, v_wood_init, v_water_init, v_fire_init, v_soil_init, flag) = landGenesisData.getDetailsFromLandInfo(_tokenId);
 
         if (_resourceToken == gold){
             initSpeed = v_gold_init;
@@ -188,8 +187,8 @@ contract LandResourceManager is Ownable, Container {
         soilAmount = getCurrentBalanceOnLandForResource(_tokenId, sioo);
     }
 
-    function changeLandData(address _newLandData) public onlyOwner {
-        landData = LandData(_newLandData);
+    function changelandGenesisData(address _newLandGenesisData) public onlyOwner {
+        landGenesisData = LandGenesisData(_newLandGenesisData);
     }
 
     function changeLand(address _newLand) public onlyOwner {

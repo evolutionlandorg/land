@@ -2,23 +2,23 @@ pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-contract LandData is Ownable {
+contract LandGenesisData is Ownable {
 
     // address of rewardBox
     address public rewardBox;
 
     /**
-     * @dev LandInfo contains attibutes of Land asset.
-     * consider LandInfo a binary array with the index starting at 0.
+     * @dev LandResourceAttr contains attibutes of Land asset.
+     * consider LandResourceAttr a binary array with the index starting at 0.
      * the rightmost one is the 0th element and the leftmost one is 255th element.
      * from the right to the left:
-     * LandInfo[0,15] : goldrate
-     * LandInfo[16,31] : woodrate
-     * LandInfo[32,47] : waterrate
-     * LandInfo[48,63] : firerate
-     * LandInfo[64,79] : soilrate
-     * LandInfo[80,95] : flag
-     * LandInfo[96,255] : not open yet
+     * LandResourceAttr[0,15] : goldrate
+     * LandResourceAttr[16,31] : woodrate
+     * LandResourceAttr[32,47] : waterrate
+     * LandResourceAttr[48,63] : firerate
+     * LandResourceAttr[64,79] : soilrate
+     * LandResourceAttr[80,95] : flag
+     * LandResourceAttr[96,255] : not open yet
     */
     //uint256 LandInfo;
 
