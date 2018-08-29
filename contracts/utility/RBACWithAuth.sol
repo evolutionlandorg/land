@@ -6,7 +6,7 @@ import "./RBACWithAdmin.sol";
 /**
  * @title RBACWithAuth
  * @dev It's recommended that you define constants in the contract,
- * like ROLE_AUTH below, to avoid typos.
+ * like ROLE_AUTH_CONTROLLER below, to avoid typos.
  * This introduce the auth features from ds-auth, an advanced feature added to RBACWithAdmin.
  * It's recommended that you follow a strategy
  * of strictly defining the abilities of your roles
