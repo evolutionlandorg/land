@@ -12,8 +12,8 @@ contract InterstellarObjectId {
     mapping (bytes32 => ObjectId) objectIdIndex;
 
     // TODO: Fix the warnings.
-    function keyOfObjectId(uint256 _a, uint256 _b, uint256 _c) public view returns (bytes32) {
-        return sha3(_a, _b, _c);
+    function keyOfObjectId(uint256 _a, uint256 _b, uint256 _c) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_a, _b, _c));
     }
 
     function getObjectId(bytes32 _key) public view returns (uint256 a, uint256 b, uint256 c) {

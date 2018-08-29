@@ -1,7 +1,8 @@
 pragma solidity ^0.4.24;
 
-import "openzeppelin-solidity/contracts//access/rbac/RBAC.sol";
+import "openzeppelin-solidity/contracts/ownership/rbac/RBAC.sol";
 
+// https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/contracts/examples/RBACWithAdmin.sol
 
 /**
  * @title RBACWithAdmin
