@@ -5,6 +5,7 @@ import "openzeppelin-solidity/contracts/token/ERC721/ERC721Token.sol";
 import "./LandBase.sol";
 
 contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase {
+    mapping (address => uint) public latestPing;
 
     modifier xRangeLimit(int _x) {
         require( _x >= -112 &&  _x <= -68);
@@ -19,6 +20,17 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase {
     /*
      * FUNCTION
      */
+
+    function ping() external {
+          latestPing[msg.sender] = block.timestamp;
+          // TODO: get the industry activies index of related land, and update LandResourceManager.
+    }
+
+    function setLatestToNow(address user) external {
+        // TODO: review and double check the meanings of isApprovedForAll in ERC721
+        require(msg.sender == owner || isApprovedForAll(user, msg.sender), "Unauthorized user");
+        latestPing[user] = block.timestamp;
+    }
 
     function assignNewLand(int _x, int _y, address beneficiary) public onlyOwner xRangeLimit(_x) yRangeLimit(_y) {
         _mint(beneficiary, _encodeTokenId(_x, _y));
