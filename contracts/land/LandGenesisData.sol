@@ -1,14 +1,12 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../utility/RBACWithAdmin.sol";
 
-contract LandGenesisData is Ownable {
-
-    // address of rewardBox
-    address public rewardBox;
+contract LandGenesisData is RBACWithAdmin {
 
     /**
-     * @dev LandResourceAttr contains attibutes of Land asset.
+     * @dev mapping from token id to land resource atrribute.
+     * LandResourceAttr contains attibutes of Land asset, and is encoded in type of uint256
      * consider LandResourceAttr a binary array with the index starting at 0.
      * the rightmost one is the 0th element and the leftmost one is 255th element.
      * from the right to the left:
@@ -20,19 +18,15 @@ contract LandGenesisData is Ownable {
      * LandResourceAttr[80,95] : flag // 1:reserved, 2:special 3:hasBox
      * LandResourceAttr[96,255] : not open yet
     */
-    //uint256 LandInfo;
-
-
     mapping(uint256 => uint256) public tokenId2Attributes;
 
-
-    function addLandPixel(uint256 _tokenId, uint256 _landAttribute) public onlyOwner {
+    function addLandPixel(uint256 _tokenId, uint256 _landAttribute) public onlyAdmin {
         require(_landAttribute != 0);
         require(tokenId2Attributes[_tokenId] == 0);
         tokenId2Attributes[_tokenId] = _landAttribute;
     }
 
-    function batchAdd(uint256[] _tokenIds, uint256[] _landAttributes) public onlyOwner {
+    function batchAdd(uint256[] _tokenIds, uint256[] _landAttributes) public onlyAdmin {
         require(_tokenIds.length == _landAttributes.length);
         uint length = _tokenIds.length;
         for (uint i = 0; i < length; i++) {
@@ -41,9 +35,7 @@ contract LandGenesisData is Ownable {
     }
 
 
-    function modifyAttributes(uint _tokenId, uint _right, uint _left, uint _newValue) public {
-        // unboxing will change resources on each land
-        require( msg.sender == owner || msg.sender == rewardBox);
+    function modifyAttributes(uint _tokenId, uint _right, uint _left, uint _newValue) public onlyAdmin {
         uint landInfo = tokenId2Attributes[_tokenId];
         uint newValue = _getModifyInfoFromAttibutes(landInfo, _right, _left, _newValue);
         tokenId2Attributes[_tokenId] = newValue;
@@ -108,11 +100,5 @@ contract LandGenesisData is Ownable {
         uint rightShift = leftShift >> (_rightAt + 255 - _leftAt);
         return rightShift;
     }
-
-    function changeRewardBox(address _rewardBox) public onlyOwner {
-        rewardBox = _rewardBox;
-    }
-
-
 
 }

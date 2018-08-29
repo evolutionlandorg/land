@@ -7,7 +7,7 @@ import "./Atlantis.sol";
 
 /**
  * @title LandResourceManager
- * @dev LandResourceManager that records the resources on Land, and resource releasing speed.
+ * @dev LandResourceManager is registry that manage the element resources generated on Land, and related resource releasing speed.
  */
 contract LandResourceManager is Ownable{
     using SafeMath for *;
@@ -25,10 +25,8 @@ contract LandResourceManager is Ownable{
 
 
     uint256 resourceReleaseStartTime;
-
-
-    // TODO: move to global settings contract.
-    uint256 public aattenPerDay = 1; // The 
+    
+    uint256 public aattenPerDay = 1; // TODO: move to global settings contract.
     uint256 public recoveAttenPerDay = 20;
     uint256 public denominator = 10000;
 
@@ -61,7 +59,11 @@ contract LandResourceManager is Ownable{
         sioo = _sioo;
     }
 
-
+    /**
+     * @dev Ping by outside to notify the element resources should be updated
+     * @param _tokenId the token id of the land
+     * @param _data the data sent by outside to update the balance and speed of element resources (TODO: To be implemented)
+     */
     function ping(uint256 _tokenId, bytes _data) public {
         require(msg.sender == address(atlantis));
 
