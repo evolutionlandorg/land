@@ -25,6 +25,9 @@ contract LandData is Ownable {
 
     mapping(uint256 => uint256) public tokenId2Attributes;
 
+    // event land attributions modification
+    event Modified(uint indexed tokenId, uint rightAt, uint leftAt, uint newValue);
+
 
     function addLandPixel(uint256 _tokenId, uint256 _landAttribute) public onlyOwner {
         require(_landAttribute != 0);
@@ -47,6 +50,7 @@ contract LandData is Ownable {
         uint landInfo = tokenId2Attributes[_tokenId];
         uint newValue = _modifyInfoFromAttibutes(landInfo, _right, _left, _newValue);
         tokenId2Attributes[_tokenId] = newValue;
+        emit Modified(_tokenId, _right, _left, _newValue);
     }
 
     function hasBox(uint256 _tokenId) public view returns (bool) {
