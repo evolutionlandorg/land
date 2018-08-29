@@ -26,7 +26,7 @@ class Land:
 
         for index, resource in enumerate(resource_json):
             x = -112 + index % 45
-            y = 22 - index % 45
+            y = 22 - int(index / 45)
             execute_transaction = "0x6bd50a14" + self.u256ToInput(x) + self.u256ToInput(y) + self.pandding(PANGU_ADDRESS)
             tx = Transaction(
                 nonce=nonce + index,

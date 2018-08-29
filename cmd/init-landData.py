@@ -28,7 +28,7 @@ class LandData:
         nonce = nonce[0]
         for index, resource in enumerate(resource_json):
             x = -112 + index % 45
-            y = 22 - index % 45
+            y = 22 - int(index / 45)
             land_contract = w3.eth.contract(address=Land_ADDRESS, abi=land_abi)
             try:
                 landTokenId = land_contract.call().encodeTokenId(x, y)
