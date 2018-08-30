@@ -103,9 +103,10 @@ contract LandGenesisData is RBACWithAdmin, ILandData {
 
 
     function _getModifyInfoFromAttributes(uint256 _attributes, uint _rightAt, uint _leftAt, uint _value) internal pure returns (uint) {
+        uint rightReserve = (_attributes << (256 - _rightAt)) >> (256 - _rightAt);
         uint emptyTarget = (_attributes >> _leftAt) << _leftAt;
         uint newValue = _value << _rightAt;
-        return (emptyTarget + newValue);
+        return (emptyTarget + newValue + rightReserve);
     }
 
 
