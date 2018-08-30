@@ -1,8 +1,9 @@
 pragma solidity ^0.4.24;
 
 import "evolutionlandcommon/contracts/RBACWithAdmin.sol";
+import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
 
-contract LandGenesisData is RBACWithAdmin {
+contract LandGenesisData is RBACWithAdmin, ILandData {
 
     /**
      * @dev mapping from token id to land resource atrribute.
