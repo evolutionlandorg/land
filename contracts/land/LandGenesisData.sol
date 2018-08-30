@@ -24,6 +24,8 @@ contract LandGenesisData is RBACWithAdmin {
     // event land attributions modification
     event Modified(uint indexed tokenId, uint rightAt, uint leftAt, uint newValue);
 
+    // event batch modify resources
+    event BatchModified(uint indexed tokenId, uint goldRate, uint woodRate, uint waterRate, uint fireRate, uint soilRate);
 
 
     function addLandPixel(uint256 _tokenId, uint256 _landAttribute) public onlyAdmin {
@@ -40,6 +42,18 @@ contract LandGenesisData is RBACWithAdmin {
         }
     }
 
+    function batchModifyResources(uint _tokenId, uint _goldRate, uint _woodRate, uint _waterRate, uint _fireRate, uint _soilRate) public onlyAdmin {
+        uint landInfo = tokenId2Attributes[_tokenId];
+        uint afterGoldModified = _getModifyInfoFromAttributes(landInfo, 0, 15, _goldRate);
+        uint afterWoodModified = _getModifyInfoFromAttributes(afterGoldModified, 16, 31, _woodRate);
+        uint afterWaterModified = _getModifyInfoFromAttributes(afterWoodModified, 32, 47, _waterRate);
+        uint afterFireModified = _getModifyInfoFromAttributes(afterWaterModified, 48, 63, _fireRate);
+        uint afterSoilModified = _getModifyInfoFromAttributes(afterFireModified, 64, 79, _soilRate);
+
+        tokenId2Attributes[_tokenId] = afterSoilModified;
+
+        emit BatchModified(_tokenId, _goldRate, _woodRate, _waterRate, _fireRate, _soilRate);
+    }
 
     function modifyAttributes(uint _tokenId, uint _right, uint _left, uint _newValue) public onlyAdmin {
         uint landInfo = tokenId2Attributes[_tokenId];
