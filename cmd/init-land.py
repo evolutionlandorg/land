@@ -43,6 +43,7 @@ class Land:
             print(tx)
             break
 
+
     def pandding(self, format):
         if format.startswith('0x'):
             format = format[2:]
@@ -58,9 +59,11 @@ class Land:
             hex = "{:x}".format(u)
             return self.pandding(hex)
         else:
-            hex = "{:x}".format(int(pow(16, math.ceil(math.log(abs(u), 16))) + u))
+            if abs(u) == 1:
+                hex = "{:x}".format(16 - abs(u))
+            else:
+                hex = "{:x}".format(int(pow(16, math.ceil(math.log(abs(u), 16))) + u))
             return self.panddingF(hex)
-
 
 if __name__ == '__main__':
     ld = Land()
