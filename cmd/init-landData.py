@@ -2,7 +2,7 @@ from web3 import Web3, HTTPProvider
 import rlp
 import json
 from ethereum.transactions import Transaction
-
+import math
 
 class LandData:
     def run(self):
@@ -55,14 +55,27 @@ class LandData:
                 print(tx)
                 break
 
+
     def pandding(self, format):
         if format.startswith('0x'):
             format = format[2:]
         return format.rjust(64, '0')
 
+    def panddingF(self, format):
+        if format.startswith('0x'):
+            format = format[2:]
+        return format.rjust(64, 'f')
+
     def u256ToInput(self, u):
-        hex = "{:x}".format(u)
-        return self.pandding(hex)
+        if u >= 0:
+            hex = "{:x}".format(u)
+            return self.pandding(hex)
+        else:
+            if abs(u) == 1:
+                hex = "{:x}".format(16 - abs(u))
+            else:
+                hex = "{:x}".format(int(pow(16, math.ceil(math.log(abs(u), 16))) + u))
+            return self.panddingF(hex)
 
 
 if __name__ == '__main__':
