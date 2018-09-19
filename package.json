@@ -1,13 +1,13 @@
 {
-  "name": "evolutionland",
-  "version": "1.0.0",
+  "name": "@evolutionland/land",
+  "version": "1.0.1",
   "description": "Land Contracts for Evolution Land",
   "main": "truffle-config.js",
   "directories": {
     "test": "test"
   },
   "dependencies": {
-    "evolutionlandcommon": "^1.0.8",
+    "evolutionlandcommon": "^1.0.11",
     "openzeppelin-solidity": "^1.12.0",
     "truffle-hdwallet-provider": "0.0.5",
     "truffle-privatekey-provider": "^0.1.0"
