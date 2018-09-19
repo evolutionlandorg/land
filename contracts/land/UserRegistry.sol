@@ -11,8 +11,8 @@ contract UserRegistry is Ownable {
     }
 
     function setLatestToNow(address user) external {
-        // TODO: review and double check the meanings of isApprovedForAll in ERC721
-        require(msg.sender == owner || isApprovedForAll(user, msg.sender), "Unauthorized user");
+//        // TODO: review and double check the meanings of isApprovedForAll in ERC721
+//        require(msg.sender == owner || isApprovedForAll(user, msg.sender), "Unauthorized user");
         latestPing[user] = block.timestamp;
     }
     
