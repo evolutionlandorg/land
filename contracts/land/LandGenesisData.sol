@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 
-import "evolutionlandcommon/contracts/RBACWithAdmin.sol";
-import "evolutionlandcommon/contracts/interfaces/ILandData.sol";
+import "@evolutionland/common/contracts/RBACWithAdmin.sol";
+import "@evolutionland/common/contracts/interfaces/ILandData.sol";
 
 contract LandGenesisData is RBACWithAdmin, ILandData {
 
