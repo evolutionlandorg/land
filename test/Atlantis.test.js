@@ -1,9 +1,8 @@
 const Atlantis = artifacts.require("Atlantis.sol");
-// const HammerCoin = artifacts.resolver.require( "/Users/hammer/Downloads/itering/code/test/contracts/HammerCoin.sol",
-//     "/Users/hammer/Downloads/itering/code/test/build/contracts/");
+
 
 var atlantis;
-var hammerCoin;
+
 
 contract('atlantis', async(accounts) => {
     it('assign new land to account[1]', async() => {
