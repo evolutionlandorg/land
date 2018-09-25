@@ -4,6 +4,7 @@ var provider = new HDWalletProvider(mnemonic, "https://kovan.infura.io/sv2WF26Mz
 
 module.exports = {
 
+
     networks: {
         development: {
             host: "127.0.0.1",
@@ -29,3 +30,4 @@ module.exports = {
         }
     }
 }
+
