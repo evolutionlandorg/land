@@ -39,6 +39,7 @@ class LandData:
                     "fire"], resource["earth"], resource["isSpecial"]
                 print(landTokenId, goldRate, woodRate, waterRate, fireRate, soilRate, isReserved)
                 x = goldRate + (woodRate << 16) + (waterRate << 32) + (fireRate << 48) + (soilRate << 64) + (isReserved << 80)
+                # 0x4d628d48 => addLandPixel(uint256,uint256)
                 execute_transaction = "0x4d628d48" + self.u256ToInput(landTokenId) + self.u256ToInput(x)
                 tx = Transaction(
                     nonce=nonce + index,
