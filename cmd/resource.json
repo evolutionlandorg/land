@@ -2258,7 +2258,7 @@
 	"water": 1,
 	"fire": 97,
 	"earth": 196,
-	"isSpecial": 0
+	"isSpecial": 1
 }, {
 	"gold": 1,
 	"wood": 142,

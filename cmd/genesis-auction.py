@@ -27,15 +27,19 @@ class Auction:
             land_abi = json.load(land_definition)
 
         nonceAdd = 0
+        ignoreCoord = self.ignore_coord()
         for index, land in enumerate(resource_json):
             x = -112 + index % 45
             y = 22 - int(index / 45)
-            if land["isSpecial"] == 1 or land["isSpecial"] == 2:  # Reserved land
+            coord = str(x) + "," + str(y)
+            if land["isSpecial"] == 1 or land["isSpecial"] == 2 or coord in ignoreCoord:  # Reserved land
+                print(coord)
                 continue
             land_contract = w3.eth.contract(address=self.Land_ADDRESS, abi=land_abi)
             try:
                 landTokenId = land_contract.call().encodeTokenId(x, y)
             except:
+                print("have error ", index, coord)
                 break
             else:
                 startingPriceInToken = Web3.toWei(6000, 'ether')
@@ -86,6 +90,17 @@ class Auction:
                 hex = "{:x}".format(int(pow(16, math.ceil(math.log(abs(u), 16))) + u))
             return self.panddingF(hex)
 
+    def ignore_coord(self):
+        file = open("resource-land-not-auction.txt", 'r+')
+        coord = []
+        while 1:
+            c = file.readline().strip('\n')
+            if not c:
+                break
+            coord.append(c)
+        file.truncate()
+        file.close()
+        return coord
 
 if __name__ == '__main__':
     ld = Auction()
