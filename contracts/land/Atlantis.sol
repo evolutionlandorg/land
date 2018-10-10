@@ -29,28 +29,44 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase {
      * FUNCTION
      */
 
-    function assignNewLand(int _x, int _y, address beneficiary) public onlyOwner xRangeLimit(_x) yRangeLimit(_y) {
-        _mint(beneficiary, _encodeTokenId(_x, _y));
+    // if tokenId2positionId and positionId2tokenId is empty
+    function assignNewLand(uint _tokenId, int _x, int _y, address beneficiary) public onlyOwner xRangeLimit(_x) yRangeLimit(_y) {
+        uint positionId = _encodePositionId(_x, _y);
+        require(tokenId2positionId[_tokenId] == 0);
+        tokenId2positionId[_tokenId] = positionId;
+        positionId2tokenId[positionId] = _tokenId;
+        _mint(beneficiary, _tokenId);
     }
 
-    function assignMultipleLands(int[] _xs, int[] _ys, address _beneficiary) public onlyOwner {
-        require(_xs.length == _ys.length, "assignMultipleLands failed because length of xs didnt match length of ys");
-        for (uint i = 0; i < _xs.length; i++) {
-            assignNewLand(_xs[i], _ys[i], _beneficiary);
-        }
+//    function assignMultipleLands(int[] _xs, int[] _ys, address _beneficiary) public onlyOwner {
+//        require(_xs.length == _ys.length, "assignMultipleLands failed because length of xs didnt match length of ys");
+//        for (uint i = 0; i < _xs.length; i++) {
+//            assignNewLand(_xs[i], _ys[i], _beneficiary);
+//        }
+//    }
+
+    // encode (x,y) to get tokenId
+    function encodeTokenId(int _x, int _y) view public returns (uint256) {
+        uint positionId = _encodePositionId(_x, _y);
+       return positionId2tokenId[positionId];
     }
 
-    // decode
-    function decodeTokenId(uint _value) pure public returns (int, int) {
-        return _decodeTokenId(_value);
+    // decode tokenId to get (x,y)
+    function decodeTokenId(uint _tokenId) view public returns (int, int) {
+        uint positionId = tokenId2positionId[_tokenId];
+        return _decodePositionId(positionId);
     }
 
     function exists(int _x, int _y) view public returns (bool) {
-        return super.exists(_encodeTokenId(_x, _y));
+        uint positionId = _encodePositionId(_x, _y);
+        uint tokenId = positionId2tokenId[positionId];
+        return super.exists(tokenId);
     }
 
     function ownerOfLand(int _x, int _y) view public returns (address) {
-        return super.ownerOf(_encodeTokenId(_x, _y));
+        uint positionId = _encodePositionId(_x, _y);
+        uint tokenId = positionId2tokenId[positionId];
+        return super.ownerOf(tokenId);
     }
 
     function ownerOfLandMany(int[] _xs, int[] _ys) view public returns (address[]) {
@@ -72,7 +88,9 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase {
         int landX;
         int landY;
         for(uint i = 0; i < length; i++) {
-            (landX, landY) = _decodeTokenId(ownedTokens[_landholder][i]);
+            uint tokenId = ownedTokens[_landholder][i];
+            uint positionId = tokenId2positionId[tokenId];
+            (landX, landY) = _decodePositionId(positionId);
             x[i] = landX;
             y[i] = landY;
         }
