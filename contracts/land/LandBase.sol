@@ -18,7 +18,7 @@ contract LandBase {
     }
 
     function _encodePositionId(int _x, int _y) pure internal returns (uint result) {
-        return _unsafeEncodeTokenId(_x, _y);
+        return _unsafeEncodeTokenId(_x, _y) + 1;
     }
     function _unsafeEncodeTokenId(int _x, int _y) pure internal returns (uint) {
         return ((uint(_x) * FACTOR) & CLEAR_LOW) | (uint(_y) & CLEAR_HIGH);
@@ -28,7 +28,8 @@ contract LandBase {
         return _decodePositionId(_positionId);
     }
     function _decodePositionId(uint _positionId) pure internal returns (int x, int y) {
-        (x, y) = _unsafeDecodePositionId(_positionId);
+        require(_positionId > 0, "Position Id is start from 1, should larger than zero");
+        (x, y) = _unsafeDecodePositionId(_positionId - 1);
     }
 
     function _unsafeDecodePositionId(uint _value) pure internal returns (int x, int y) {
