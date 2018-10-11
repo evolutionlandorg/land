@@ -14,6 +14,17 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocati
 
     uint256 public lastTokenId;
 
+    bool private singletonLock = false;
+
+    /*
+     *  Modifiers
+     */
+    modifier singletonLockCall() {
+        require(!singletonLock, "Only can call once");
+        _;
+        singletonLock = true;
+    }
+
     modifier xRangeLimit(int _x) {
         require( _x >= -112 &&  _x <= -68);
         _;
@@ -31,6 +42,35 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocati
     modifier onlyOwnerOf(uint256 _tokenId) {
         require(ownerOf(_tokenId) == msg.sender);
         _;
+    }
+
+        /**
+     * @dev Atlantis's constructor 
+     */
+    constructor () public {
+        // initializeContract();
+    }
+
+    /**
+     * @dev Same with constructor, but is used and called by storage proxy as logic contract.
+     */
+    function initializeContract() public singletonLockCall {
+        // Ownable constructor
+        owner = msg.sender;
+
+        // SupportsInterfaceWithLookup constructor
+        _registerInterface(InterfaceId_ERC165);
+
+        // ERC721BasicToken constructor
+        _registerInterface(InterfaceId_ERC721);
+        _registerInterface(InterfaceId_ERC721Exists);
+
+        // ERC721Token constructor
+        name_ = "Atlantis Land";
+        symbol_ = "OASIS";
+        // register the supported interfaces to conform to ERC721 via ERC165
+        _registerInterface(InterfaceId_ERC721Enumerable);
+        _registerInterface(InterfaceId_ERC721Metadata);
     }
 
     /*
