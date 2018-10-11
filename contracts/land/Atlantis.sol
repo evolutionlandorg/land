@@ -12,6 +12,8 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocati
     // token id => encode(x,y) postiion in map
     mapping (uint256 => uint256) public tokenId2LocationId;
 
+    uint256 public lastTokenId;
+
     modifier xRangeLimit(int _x) {
         require( _x >= -112 &&  _x <= -68);
         _;
@@ -36,7 +38,7 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocati
      */
     function assignNewLand(int _x, int _y, address beneficiary) public onlyOwner xRangeLimit(_x) yRangeLimit(_y) returns (uint _tokenId) {
         // auto increase token id, start from 1
-        _tokenId = totalSupply() + 1;
+        _tokenId = lastTokenId + 1;
 
         uint locationId = encodeLocationId(_x, _y);
         require(locationId2TokenId[locationId] == 0, "Land in this position already been mint.");
@@ -44,7 +46,6 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocati
         tokenId2LocationId[_tokenId] = locationId;
         locationId2TokenId[locationId] = _tokenId;
 
-        // TODO add event.
         _mint(beneficiary, _tokenId);
     }
 
