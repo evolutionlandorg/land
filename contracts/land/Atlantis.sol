@@ -2,9 +2,15 @@ pragma solidity ^0.4.24;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Token.sol";
-import "./LandBase.sol";
+import "@evolutionland/common/contracts/interfaces/ITokenLocation.sol";
 
-contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase {
+contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocation {
+    
+    // mapping from position in map to token id.
+    mapping (uint256 => uint256) public locationId2TokenId;
+
+    // token id => encode(x,y) postiion in map
+    mapping (uint256 => uint256) public tokenId2LocationId;
 
     modifier xRangeLimit(int _x) {
         require( _x >= -112 &&  _x <= -68);
@@ -28,52 +34,52 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase {
     /*
      * @dev assign new land
      */
-    function assignNewLand(int _x, int _y, address beneficiary) public onlyOwner xRangeLimit(_x) yRangeLimit(_y) returns (uint tokenId) {
+    function assignNewLand(int _x, int _y, address beneficiary) public onlyOwner xRangeLimit(_x) yRangeLimit(_y) returns (uint _tokenId) {
         // auto increase token id, start from 1
-        tokenId = totalSupply() + 1;
+        _tokenId = totalSupply() + 1;
 
-        uint positionId = _encodePositionId(_x, _y);
-        require(positionId2tokenId[positionId] == 0, "Land in this position already been mint.");
+        uint locationId = encodeLocationId(_x, _y);
+        require(locationId2TokenId[locationId] == 0, "Land in this position already been mint.");
 
-        tokenId2positionId[_tokenId] = positionId;
-        positionId2tokenId[positionId] = _tokenId;
+        tokenId2LocationId[_tokenId] = locationId;
+        locationId2TokenId[locationId] = _tokenId;
 
         // TODO add event.
         _mint(beneficiary, _tokenId);
     }
 
-    function assignMultipleLands(int[] _xs, int[] _ys, address _beneficiary) public onlyOwner returns (uint[]) {
+    function assignMultipleLands(int[] _xs, int[] _ys, address _beneficiary) public onlyOwner returns (uint[]){
         require(_xs.length == _ys.length, "assignMultipleLands failed because length of xs didnt match length of ys");
 
-        int[] memory tokenIds = new int[](_xs.length);
+        uint[] memory _tokenIds = new uint[](_xs.length);
 
         for (uint i = 0; i < _xs.length; i++) {
-            tokenIds[i] = assignNewLand(_xs[i], _ys[i], _beneficiary);
+            _tokenIds[i] = assignNewLand(_xs[i], _ys[i], _beneficiary);
         }
-        return tokenIds;
-    }
-
-    // encode (x,y) to get tokenId
-    function getLocationTokenId(int _x, int _y) public view returns (uint256) {
-        uint positionId = _encodePositionId(_x, _y);
-        return positionId2tokenId[positionId];
+        return _tokenIds;
     }
 
     // decode tokenId to get (x,y)
     function getTokenLocation(uint _tokenId) public view returns (int, int) {
-        uint positionId = tokenId2positionId[_tokenId];
-        return _decodePositionId(positionId);
+        uint locationId = tokenId2LocationId[_tokenId];
+        return decodeLocationId(locationId);
+    }
+
+    // encode (x,y) to get tokenId
+    function getTokenIdByLocation(int _x, int _y) public view returns (uint256) {
+        uint locationId = encodeLocationId(_x, _y);
+        return locationId2TokenId[locationId];
     }
 
     function exists(int _x, int _y) public view returns (bool) {
-        uint positionId = _encodePositionId(_x, _y);
-        uint tokenId = positionId2tokenId[positionId];
+        uint locationId = encodeLocationId(_x, _y);
+        uint tokenId = locationId2TokenId[locationId];
         return super.exists(tokenId);
     }
 
     function ownerOfLand(int _x, int _y) public view returns (address) {
-        uint positionId = _encodePositionId(_x, _y);
-        uint tokenId = positionId2tokenId[positionId];
+        uint locationId = encodeLocationId(_x, _y);
+        uint tokenId = locationId2TokenId[locationId];
         return super.ownerOf(tokenId);
     }
 
@@ -85,6 +91,8 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase {
         for (uint i = 0; i < _xs.length; i++) {
             addrs[i] = ownerOfLand(_xs[i], _ys[i]);
         }
+
+        return addrs;
     }
 
     function landOf(address _landholder) public view returns (int[], int[]) {
@@ -97,17 +105,13 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase {
         int landY;
         for(uint i = 0; i < length; i++) {
             uint tokenId = ownedTokens[_landholder][i];
-            uint positionId = tokenId2positionId[tokenId];
-            (landX, landY) = _decodePositionId(positionId);
+            uint locationId = tokenId2LocationId[tokenId];
+            (landX, landY) = decodeLocationId(locationId);
             x[i] = landX;
             y[i] = landY;
         }
 
         return (x, y);
-    }
-
-    function indexOfLand(uint _tokenId) public view returns (uint index) {
-        index = allTokensIndex[_tokenId];
     }
 
     //@dev user invoke approveAndCall to create auction
@@ -125,5 +129,4 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, LandBase {
         }
 
     }
-
 }
