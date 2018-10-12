@@ -3,8 +3,12 @@ pragma solidity ^0.4.24;
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Token.sol";
 import "@evolutionland/common/contracts/interfaces/ITokenLocation.sol";
+import "@evolutionland/common/contracts/interfaces/IInterstellarEncoder.sol";
+import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
+import "@evolutionland/common/contracts/SettingIds.sol";
 
-contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocation {
+contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocation, SettingIds {
+    ISettingsRegistry public registry;
     
     // mapping from position in map to token id.
     mapping (uint256 => uint256) public locationId2TokenId;
@@ -54,7 +58,7 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocati
     /**
      * @dev Same with constructor, but is used and called by storage proxy as logic contract.
      */
-    function initializeContract() public singletonLockCall {
+    function initializeContract(address _registry) public singletonLockCall {
         // Ownable constructor
         owner = msg.sender;
 
@@ -71,6 +75,8 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocati
         // register the supported interfaces to conform to ERC721 via ERC165
         _registerInterface(InterfaceId_ERC721Enumerable);
         _registerInterface(InterfaceId_ERC721Metadata);
+
+        registry = ISettingsRegistry(_registry);
     }
 
     /*
@@ -78,7 +84,14 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocati
      */
     function assignNewLand(int _x, int _y, address beneficiary) public onlyOwner xRangeLimit(_x) yRangeLimit(_y) returns (uint _tokenId) {
         // auto increase token id, start from 1
-        _tokenId = lastTokenId + 1;
+
+        lastTokenId += 1;
+        require(lastTokenId <= 340282366920938463463374607431768211455, "Can not be stored with 128 bits.");
+
+        address interstellarEncoder = registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER);
+        require(interstellarEncoder != 0x0, "Contract Interstellar Encoder does not exist.");
+        _tokenId = IInterstellarEncoder(interstellarEncoder).encodeTokenId(
+            address(this), uint8(IInterstellarEncoder.ObjectClass.LAND), uint128(lastTokenId));
 
         uint locationId = encodeLocationId(_x, _y);
         require(locationId2TokenId[locationId] == 0, "Land in this position already been mint.");

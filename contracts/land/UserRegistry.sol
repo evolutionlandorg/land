@@ -5,9 +5,9 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 contract UserRegistry is Ownable {
     mapping (address => uint) public latestPing;
 
-        function ping() external {
-          latestPing[msg.sender] = block.timestamp;
-          // TODO: get the industry activies index of related land, and update LandResourceManager.
+    function ping() external {
+        latestPing[msg.sender] = block.timestamp;
+        // TODO: get the industry activies index of related land, and update LandResourceManager.
     }
 
     function setLatestToNow(address user) external {
