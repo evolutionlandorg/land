@@ -2,18 +2,18 @@ pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./LandGenesisData.sol";
-import "./Atlantis.sol";
+import "@evolutionland/common/contracts/TokenOwnership.sol";
+import "./LandBase.sol";
 
 /**
  * @title LandResourceManager
  * @dev LandResourceManager is registry that manage the element resources generated on Land, and related resource releasing speed.
  */
-contract LandResourceManager is Ownable{
+contract LandResource is Ownable{
     using SafeMath for *;
 
-    LandGenesisData public landGenesisData;
-    Atlantis public atlantis;
+    LandBase public landBase;
+    TokenOwnership public tokenOwnerShip;
 
 
     // ERC20 resource tokens
@@ -47,9 +47,9 @@ contract LandResourceManager is Ownable{
 
     mapping (uint256 => UpdatedElementResource) public resourceBalance;
 
-    constructor(address _landGenesisData, address _atlantis, uint256 _resourceReleaseStartTime, address _gold, address _wood, address _hho, address _fire, address _sioo) public {
-        landGenesisData = LandGenesisData(_landGenesisData);
-        atlantis = Atlantis(_atlantis);
+    constructor(address _landBase, address _tokenOwnerShip, uint256 _resourceReleaseStartTime, address _gold, address _wood, address _hho, address _fire, address _sioo) public {
+        landBase = LandBase(_landBase);
+        tokenOwnerShip = TokenOwnership(_tokenOwnerShip);
         resourceReleaseStartTime = _resourceReleaseStartTime;
 
         gold = _gold;
@@ -65,7 +65,7 @@ contract LandResourceManager is Ownable{
      * @param _data the data sent by outside to update the balance and speed of element resources (TODO: To be implemented)
      */
     function ping(uint256 _tokenId, bytes _data) public {
-        require(msg.sender == address(atlantis));
+        require(msg.sender == address(landBase));
 
         // TODO: 
 
@@ -108,7 +108,7 @@ contract LandResourceManager is Ownable{
     }
 
     function _getInitSpeedForLand(uint256 _tokenId, address _resourceToken) internal view returns (uint256 initSpeed) {
-        var (v_gold_init, v_wood_init, v_water_init, v_fire_init, v_soil_init, flag) = landGenesisData.getDetailsFromLandInfo(_tokenId);
+        var (v_gold_init, v_wood_init, v_water_init, v_fire_init, v_soil_init, flag) = landBase.getDetailsFromLandInfo(_tokenId);
 
         if (_resourceToken == gold){
             initSpeed = v_gold_init;
@@ -189,12 +189,8 @@ contract LandResourceManager is Ownable{
         soilAmount = getCurrentBalanceOnLandForResource(_tokenId, sioo);
     }
 
-    function changelandGenesisData(address _newLandGenesisData) public onlyOwner {
-        landGenesisData = LandGenesisData(_newLandGenesisData);
-    }
-
-    function changeLand(address _newLand) public onlyOwner {
-        atlantis = Atlantis(_newLand);
+    function changelandBase(address _newLandGenesisData) public onlyOwner {
+        landBase = LandBase(_newLandGenesisData);
     }
 
     function _updateElementResource(uint256 _tokenId) internal {
