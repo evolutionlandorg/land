@@ -76,6 +76,8 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocati
         _registerInterface(InterfaceId_ERC721Enumerable);
         _registerInterface(InterfaceId_ERC721Metadata);
 
+        _registerInterface(InterfaceId_ITokenLocationExists);
+
         registry = ISettingsRegistry(_registry);
     }
 
@@ -89,7 +91,7 @@ contract Atlantis is ERC721Token("Atlantis Land","OASIS"), Ownable, ITokenLocati
         require(lastTokenId <= 340282366920938463463374607431768211455, "Can not be stored with 128 bits.");
 
         address interstellarEncoder = registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER);
-        require(interstellarEncoder != 0x0, "Contract Interstellar Encoder does not exist.");
+        require(interstellarEncoder != address(0), "Contract Interstellar Encoder does not exist.");
         _tokenId = IInterstellarEncoder(interstellarEncoder).encodeTokenId(
             address(this), uint8(IInterstellarEncoder.ObjectClass.LAND), uint128(lastTokenId));
 
