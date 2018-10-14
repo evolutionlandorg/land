@@ -6,15 +6,14 @@ import "@evolutionland/common/contracts/TokenOwnership.sol";
 import "./LandBase.sol";
 
 /**
- * @title LandResourceManager
- * @dev LandResourceManager is registry that manage the element resources generated on Land, and related resource releasing speed.
+ * @title LandController
+ * @dev LandController is registry that manage the element resources generated on Land, and related resource releasing speed.
  */
-contract LandResource is Ownable{
+contract LandController is Ownable{
     using SafeMath for *;
 
     LandBase public landBase;
     TokenOwnership public tokenOwnerShip;
-
 
     // ERC20 resource tokens
     address public gold;
@@ -40,14 +39,15 @@ contract LandResource is Ownable{
     // 土, Evolution Land Silicon
     struct UpdatedElementResource {
         mapping(address=>uint256) updatedBalances;
-        uint256 lastUpdateTime;
         uint256 lastUpdateSpeedInSecondsDenominator;
         uint256 lastDestoryAttenInSecondsDenominator;
+        uint256 lastUpdateTime;
     }
 
     mapping (uint256 => UpdatedElementResource) public resourceBalance;
 
-    constructor(address _landBase, address _tokenOwnerShip, uint256 _resourceReleaseStartTime, address _gold, address _wood, address _hho, address _fire, address _sioo) public {
+    constructor(address _landBase, address _tokenOwnerShip, uint256
+         _resourceReleaseStartTime, address _gold, address _wood, address _hho, address _fire, address _sioo) public {
         landBase = LandBase(_landBase);
         tokenOwnerShip = TokenOwnership(_tokenOwnerShip);
         resourceReleaseStartTime = _resourceReleaseStartTime;
@@ -104,27 +104,8 @@ contract LandResource is Ownable{
 
     function getCurrentSpeedForLand(uint256 _tokenId, address _resourceToken) public view returns (uint256 currentSpeed) {
 
-        return _getInitSpeedForLand(_tokenId, _resourceToken).mul(_getSpeedInSecondsDenominatorForLand(_tokenId, now)).div(denominator_in_seconds);
+        return landBase.getResourceRate(_tokenId, _resourceToken).mul(_getSpeedInSecondsDenominatorForLand(_tokenId, now)).div(denominator_in_seconds);
     }
-
-    function _getInitSpeedForLand(uint256 _tokenId, address _resourceToken) internal view returns (uint256 initSpeed) {
-        var (v_gold_init, v_wood_init, v_water_init, v_fire_init, v_soil_init, flag) = landBase.getDetailsFromLandInfo(_tokenId);
-
-        if (_resourceToken == gold){
-            initSpeed = v_gold_init;
-        } else if (_resourceToken == wood){
-            initSpeed = v_wood_init;
-        } else if (_resourceToken == hho){
-            initSpeed = v_water_init;
-        } else if (_resourceToken == fire){
-            initSpeed = v_fire_init;
-        } else if (_resourceToken == sioo){
-            initSpeed = v_soil_init;
-        } else {
-            return 0;
-        }
-    }
-
 
     /**
      * @dev Get and Query the amount of resources available for use on specific land.
@@ -141,7 +122,7 @@ contract LandResource is Ownable{
         }
         // second, add the balance which have not been updated;
 
-        uint256 v_init = _getInitSpeedForLand(_tokenId, _resourceToken);
+        uint256 v_init = landBase.getResourceRate(_tokenId, _resourceToken);
 
         // the longest seconds to zero speed.
         uint256 currentTime = now;
@@ -169,38 +150,16 @@ contract LandResource is Ownable{
     // TODO: add airdrop functin for airdrop tokens to the land.
     // implement by using tokenFallback.
 
-
-    /**
-     * @dev Get and Query the amount of resources available for use on specific land.
-     * @param _tokenId The token id of specific land.
-    */
-    function getCurrentResourceBalanceOnLand(uint256 _tokenId) public view 
-    returns (
-        uint goldAmount,
-        uint woodAmount,
-        uint waterAmount,
-        uint fireAmount,
-        uint soilAmount) {
-
-        goldAmount = getCurrentBalanceOnLandForResource(_tokenId, gold);
-        woodAmount = getCurrentBalanceOnLandForResource(_tokenId, wood);
-        waterAmount = getCurrentBalanceOnLandForResource(_tokenId, hho);
-        fireAmount = getCurrentBalanceOnLandForResource(_tokenId, fire);
-        soilAmount = getCurrentBalanceOnLandForResource(_tokenId, sioo);
-    }
-
     function changelandBase(address _newLandGenesisData) public onlyOwner {
         landBase = LandBase(_newLandGenesisData);
     }
 
     function _updateElementResource(uint256 _tokenId) internal {
-        var (goldAmount, woodAmount, waterAmount, fireAmount, soilAmount) = getCurrentResourceBalanceOnLand(_tokenId);
-
-        resourceBalance[_tokenId].updatedBalances[gold] = goldAmount;
-        resourceBalance[_tokenId].updatedBalances[wood] = woodAmount;
-        resourceBalance[_tokenId].updatedBalances[hho] = waterAmount;
-        resourceBalance[_tokenId].updatedBalances[fire] = fireAmount;
-        resourceBalance[_tokenId].updatedBalances[sioo] = soilAmount;
+        resourceBalance[_tokenId].updatedBalances[gold] = getCurrentBalanceOnLandForResource(_tokenId, gold);
+        resourceBalance[_tokenId].updatedBalances[wood] = getCurrentBalanceOnLandForResource(_tokenId, wood);
+        resourceBalance[_tokenId].updatedBalances[hho] = getCurrentBalanceOnLandForResource(_tokenId, hho);
+        resourceBalance[_tokenId].updatedBalances[fire] = getCurrentBalanceOnLandForResource(_tokenId, fire);
+        resourceBalance[_tokenId].updatedBalances[sioo] = getCurrentBalanceOnLandForResource(_tokenId, sioo);
         resourceBalance[_tokenId].lastUpdateTime = now;
         resourceBalance[_tokenId].lastUpdateSpeedInSecondsDenominator = _getSpeedInSecondsDenominatorForLand(_tokenId, now);
     }
