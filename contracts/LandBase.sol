@@ -65,6 +65,7 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
     function initializeContract(address _registry, address _tokenLocation) public singletonLockCall {
         // Ownable constructor
         addRole(msg.sender, ROLE_ADMIN);
+        addRole(msg.sender, ROLE_AUTH_CONTROLLER);
         registry = ISettingsRegistry(_registry);
         tokenLocation = ITokenLocation(_tokenLocation);
         objectOwnership = ObjectOwnership(registry.addressOf(CONTRACT_TOKEN_OWNERSHIP));
