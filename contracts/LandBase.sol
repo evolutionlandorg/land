@@ -8,7 +8,8 @@ import "@evolutionland/common/contracts/ObjectOwnership.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
 
 
-contract LandBase is RBACWithAdmin, ILandBase, SettingIds {
+contract LandBase is RBACWithAuth, ILandBase, SettingIds {
+
     bool private singletonLock = false;
 
     uint256 constant internal RESERVED = uint256(1);
@@ -66,7 +67,7 @@ contract LandBase is RBACWithAdmin, ILandBase, SettingIds {
         addRole(msg.sender, ROLE_ADMIN);
         registry = ISettingsRegistry(_registry);
         tokenLocation = ITokenLocation(_tokenLocation);
-        tokenOwership = TokenOwnership(registry.addressOf(CONTRACT_TOKEN_OWNERSHIP));
+        objectOwnership = ObjectOwnership(registry.addressOf(CONTRACT_TOKEN_OWNERSHIP));
     }
 
     /*

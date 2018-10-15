@@ -3,9 +3,9 @@ const InterstellarEncoder = artifacts.require('InterstellarEncoder');
 const SettingsRegistry = artifacts.require('SettingsRegistry');
 const SettingIds = artifacts.require('SettingIds');
 const LandBase = artifacts.require('LandBase');
-const TokenOwnership = artifacts.require('TokenOwnership');
+const ObjectOwnership = artifacts.require('ObjectOwnership');
 const Proxy = artifacts.require('OwnedUpgradeabilityProxy');
-const TokenOwnershipAuthority = artifacts.require('TokenOwnershipAuthority');
+const Authority = artifacts.require('Authority');
 const TokenLocation = artifacts.require('TokenLocation');
 
 module.exports = {
@@ -14,12 +14,17 @@ module.exports = {
 
 async function initiateLand(accounts) {
     let settingsRegistry = await SettingsRegistry.new();
-
+    console.log('SettingsRegistry address : ', settingsRegistry.address);
     let gold = await StandardERC223.new("GOLD");
+    console.log('gold address : ', gold.address);
     let wood = await StandardERC223.new("WOOD");
+    console.log('wood address : ', wood.address);
     let water = await StandardERC223.new("WATER");
+    console.log('water address : ', water.address);
     let fire = await StandardERC223.new("FIRE");
+    console.log('fire address : ', fire.address);
     let soil = await StandardERC223.new("SOIL");
+    console.log('soil address : ', soil.address);
 
     let settingsId = await SettingIds.new();
 
@@ -36,29 +41,56 @@ async function initiateLand(accounts) {
     await settingsRegistry.setAddressProperty(fireId, fire.address);
     await settingsRegistry.setAddressProperty(soilId, soil.address);
 
+
+
     // new LandBase
     let tokenLocation = await TokenLocation.new();
-    let landBase = await LandBase.new();
+    console.log('tokenLocation address : ', tokenLocation.address);
+    let landBase = await LandBase.new({gas: 6000000});
+    console.log('landBase address : ', landBase.address);
     let landBaseProxy = await Proxy.new();
-    await landBaseProxy.upgradeTo(landBase);
+    console.log('landBaseProxy address : ', landBaseProxy.address);
 
     // new TokenOwnerShip
-    let tokenOwnership = await TokenOwnerShip.new();
-    let tokenOwnershipProxy = await Proxy.new();
+    let objectOwnership = await ObjectOwnership.new();
+    console.log('objectOwnership implementation: ', await objectOwnership.address);
+    let objectOwnershipProxy = await Proxy.new();
+    console.log('objectOwnershipProxy implementation: ', await objectOwnershipProxy.address);
+
+    let interstellarEncoder = await InterstellarEncoder.new();
+    console.log("interstellarEncoder address: ", interstellarEncoder.address);
 
     // register to settingsRegisty
     let landBaseId = await settingsId.CONTRACT_LAND_BASE.call();
     await settingsRegistry.setAddressProperty(landBaseId, landBaseProxy.address);
-    let tokenOwnershipId = await settingsId.CONTRACT_TOKEN_OWNERSHIP.call();
-    await settingsRegistry.setAddressProperty(tokenOwnershipId, tokenOwnershipProxy);
 
-    await landBaseProxy.initializeContract(settingsRegistry.address, tokenLocation.address);
-    let tokenOwnershipAuthority = await TokenOwnershipProxy.new(landBaseProxy.address);
-    await tokenOwnershipProxy.upgradeTo(tokenOwnership);
-    await tokenOwnership.initializeContract(settingsRegistry.address);
+    let objectOwnershipId = await settingsId.CONTRACT_TOKEN_OWNERSHIP.call();
+    await settingsRegistry.setAddressProperty(objectOwnershipId, objectOwnershipProxy.address);
 
-    await tokenOwnershipProxy.setAuthority(tokenOwnershipAuthority.address);
+    let interstellarEncoderId = await settingsId.CONTRACT_INTERSTELLAR_ENCODER.call();
+    await settingsRegistry.setAddressProperty(interstellarEncoderId, interstellarEncoder.address);
 
-    return {landBase: landBaseProxy, tokenOwnership: tokenOwnershipProxy, gold: gold, wood: wood, water: water, fire: fire, soil: soil}
+    await interstellarEncoder.registerNewTokenContract(objectOwnershipProxy.address);
+    await interstellarEncoder.registerNewObjectClass(landBaseProxy.address, 1);
+
+
+    let authority = await Authority.new(landBaseProxy.address);
+
+    // upgrade
+    await landBaseProxy.upgradeTo(landBase.address);
+    await objectOwnershipProxy.upgradeTo(objectOwnership.address);
+
+    await LandBase.at(landBaseProxy.address).initializeContract(settingsRegistry.address, tokenLocation.address);
+    await ObjectOwnership.at(objectOwnershipProxy.address).initializeContract(settingsRegistry.address);
+
+    // set authority
+    await tokenLocation.setAuthority(authority.address);
+    await ObjectOwnership.at(objectOwnershipProxy.address).setAuthority(authority.address);
+    console.log('Intialize Successfully!')
+
+    return {landBase: LandBase.at(landBaseProxy.address), objectOwnership:
+        ObjectOwnership.at(objectOwnershipProxy.address),
+        tokenLocation: tokenLocation,
+        gold: gold, wood: wood, water: water, fire: fire, soil: soil}
 
 }

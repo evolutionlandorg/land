@@ -2,7 +2,7 @@ pragma solidity ^0.4.24;
 
 contract ILandBase {
 
-    function modifyResourceRate(uint _landTokenID, address _resourceToken, uint _newResouceRate) public;
+    function modifyResourceRate(uint _landTokenID, address _resourceToken, uint16 _newResouceRate) public;
 
     function setHasBox(uint _landTokenID, bool isHasBox) public;
 
