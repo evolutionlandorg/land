@@ -2,18 +2,18 @@ pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "@evolutionland/common/contracts/TokenOwnership.sol";
+import "@evolutionland/common/contracts/ObjectOwnership.sol";
 import "./LandBase.sol";
 
 /**
- * @title LandController
- * @dev LandController is registry that manage the element resources generated on Land, and related resource releasing speed.
+ * @title LandResource
+ * @dev LandResource is registry that manage the element resources generated on Land, and related resource releasing speed.
  */
-contract LandController is Ownable{
+contract LandResource is Ownable{
     using SafeMath for *;
 
     LandBase public landBase;
-    TokenOwnership public tokenOwnerShip;
+    ObjectOwnership public objectOwnership;
 
     // ERC20 resource tokens
     address public gold;
@@ -21,7 +21,6 @@ contract LandController is Ownable{
     address public hho;
     address public fire;
     address public sioo;
-
 
     uint256 resourceReleaseStartTime;
     
@@ -38,18 +37,19 @@ contract LandController is Ownable{
     // 火, Evolution Land fire
     // 土, Evolution Land Silicon
     struct UpdatedElementResource {
-        mapping(address=>uint256) updatedBalances;
+        mapping(address=>uint256) updatedMintableBalances;
         uint256 lastUpdateSpeedInSecondsDenominator;
         uint256 lastDestoryAttenInSecondsDenominator;
+        uint256 industryIndex;
         uint256 lastUpdateTime;
     }
 
     mapping (uint256 => UpdatedElementResource) public resourceBalance;
 
-    constructor(address _landBase, address _tokenOwnerShip, uint256
+    constructor(address _landBase, address _objectOwnership, uint256
          _resourceReleaseStartTime, address _gold, address _wood, address _hho, address _fire, address _sioo) public {
         landBase = LandBase(_landBase);
-        tokenOwnerShip = TokenOwnership(_tokenOwnerShip);
+        objectOwnership = ObjectOwnership(_objectOwnership);
         resourceReleaseStartTime = _resourceReleaseStartTime;
 
         gold = _gold;
@@ -114,7 +114,7 @@ contract LandController is Ownable{
     function getCurrentBalanceOnLandForResource(uint256 _tokenId, address _resourceToken) public view 
     returns (uint256 currentBalance) {
         // first, add the updated balance
-        currentBalance = resourceBalance[_tokenId].updatedBalances[_resourceToken];
+        currentBalance = resourceBalance[_tokenId].updatedMintableBalances[_resourceToken];
 
         if (_resourceToken != gold && _resourceToken != wood && _resourceToken != hho && _resourceToken != fire && _resourceToken != sioo)
         {
@@ -155,11 +155,11 @@ contract LandController is Ownable{
     }
 
     function _updateElementResource(uint256 _tokenId) internal {
-        resourceBalance[_tokenId].updatedBalances[gold] = getCurrentBalanceOnLandForResource(_tokenId, gold);
-        resourceBalance[_tokenId].updatedBalances[wood] = getCurrentBalanceOnLandForResource(_tokenId, wood);
-        resourceBalance[_tokenId].updatedBalances[hho] = getCurrentBalanceOnLandForResource(_tokenId, hho);
-        resourceBalance[_tokenId].updatedBalances[fire] = getCurrentBalanceOnLandForResource(_tokenId, fire);
-        resourceBalance[_tokenId].updatedBalances[sioo] = getCurrentBalanceOnLandForResource(_tokenId, sioo);
+        resourceBalance[_tokenId].updatedMintableBalances[gold] = getCurrentBalanceOnLandForResource(_tokenId, gold);
+        resourceBalance[_tokenId].updatedMintableBalances[wood] = getCurrentBalanceOnLandForResource(_tokenId, wood);
+        resourceBalance[_tokenId].updatedMintableBalances[hho] = getCurrentBalanceOnLandForResource(_tokenId, hho);
+        resourceBalance[_tokenId].updatedMintableBalances[fire] = getCurrentBalanceOnLandForResource(_tokenId, fire);
+        resourceBalance[_tokenId].updatedMintableBalances[sioo] = getCurrentBalanceOnLandForResource(_tokenId, sioo);
         resourceBalance[_tokenId].lastUpdateTime = now;
         resourceBalance[_tokenId].lastUpdateSpeedInSecondsDenominator = _getSpeedInSecondsDenominatorForLand(_tokenId, now);
     }
