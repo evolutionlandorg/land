@@ -91,6 +91,7 @@ async function initiateLand(accounts) {
     return {landBase: LandBase.at(landBaseProxy.address), objectOwnership:
         ObjectOwnership.at(objectOwnershipProxy.address),
         tokenLocation: tokenLocation,
+        interstellarEncoder: interstellarEncoder,
         gold: gold, wood: wood, water: water, fire: fire, soil: soil}
 
 }

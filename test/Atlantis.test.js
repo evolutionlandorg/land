@@ -22,6 +22,7 @@ contract('Land series contracts', async (accounts) => {
     let landBase;
     let objectOwnership;
     let tokenLocation;
+    let interstellarEncoder;
 
     before('intialize', async () => {
       var initlal = await initiateLand(accounts);
@@ -33,6 +34,7 @@ contract('Land series contracts', async (accounts) => {
         landBase = initlal.landBase;
         objectOwnership = initlal.objectOwnership;
         tokenLocation = initlal.tokenLocation;
+        interstellarEncoder = initlal.interstellarEncoder;
     })
 
     it('test initialization', async () => {
@@ -50,6 +52,10 @@ contract('Land series contracts', async (accounts) => {
     it('assign new land', async () => {
         let tokenId = await landBase.assignNewLand(-90, 12, accounts[0], 100, 99, 98, 97, 96, 4);
         console.log("tokenId: ", tokenId.valueOf());
+        let tokenOne = await interstellarEncoder.encodeTokenIdForObjectContract(objectOwnership.address, landBase.address, 1);
+        console.log("tokenOne: ", tokenOne.valueOf());
+        let owner = await objectOwnership.ownerOf(tokenOne);
+        assert.equal(owner, accounts[0]);
     })
 
 })
