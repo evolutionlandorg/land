@@ -12,6 +12,7 @@ var initiateLand = initial.initiateLand;
 const Web3 = require('web3');
 var web3 = new Web3(Web3.givenProvider);
 
+var from = '0x4cc4c344eba849dc09ac9af4bff1977e44fc1d7e';
 
 contract('Land series contracts', async (accounts) => {
     let gold;
@@ -50,12 +51,12 @@ contract('Land series contracts', async (accounts) => {
     })
 
     it('assign new land', async () => {
-        let tokenId = await landBase.assignNewLand(-90, 12, accounts[0], 100, 99, 98, 97, 96, 4);
+        let tokenId = await landBase.assignNewLand(-90, 12, from, 100, 99, 98, 97, 96, 4);
         console.log("tokenId: ", tokenId.valueOf());
         let tokenOne = await interstellarEncoder.encodeTokenIdForObjectContract(objectOwnership.address, landBase.address, 1);
         console.log("tokenOne: ", tokenOne.valueOf());
         let owner = await objectOwnership.ownerOf(tokenOne);
-        assert.equal(owner, accounts[0]);
+        assert.equal(owner, from);
     })
 
 })
