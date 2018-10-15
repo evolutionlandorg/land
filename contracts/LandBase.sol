@@ -9,6 +9,7 @@ import "@evolutionland/common/contracts/TokenOwnership.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
 
 contract LandBase is RBACWithAdmin, ILandBase, SettingIds {
+    bool private singletonLock = false;
 
     uint256 constant internal RESERVED = uint256(1);
 
@@ -42,6 +43,15 @@ contract LandBase is RBACWithAdmin, ILandBase, SettingIds {
 
     uint256 public lastTokenId;
 
+    /*
+     *  Modifiers
+     */
+    modifier singletonLockCall() {
+        require(!singletonLock, "Only can call once");
+        _;
+        singletonLock = true;
+    }
+
     modifier xAtlantisRangeLimit(int _x) {
         require( _x >= -112 &&  _x <= -68);
         _;
@@ -50,6 +60,17 @@ contract LandBase is RBACWithAdmin, ILandBase, SettingIds {
     modifier yAtlantisRangeLimit(int _y) {
         require(_y >= -22 && _y <= 22);
         _;
+    }
+
+    /**
+     * @dev Same with constructor, but is used and called by storage proxy as logic contract.
+     */
+    function initializeContract(address _registry, address _tokenLocation) public singletonLockCall {
+        // Ownable constructor
+        addRole(msg.sender, ROLE_ADMIN);
+        registry = ISettingsRegistry(_registry);
+        tokenLocation = ITokenLocation(_tokenLocation);
+        tokenOwership = TokenOwnership(registry.addressOf(CONTRACT_TOKEN_OWNERSHIP));
     }
 
     /*
