@@ -5,7 +5,9 @@ const SettingIds = artifacts.require('SettingIds');
 const LandBase = artifacts.require('LandBase');
 const ObjectOwnership = artifacts.require('ObjectOwnership');
 const Proxy = artifacts.require('OwnedUpgradeabilityProxy');
-const Authority = artifacts.require('Authority');
+const LandBaseAuthority = artifacts.require('LandBaseAuthority');
+const ObjectOwnershipAuthority = artifacts.require('ObjectOwnershipAuthority');
+const TokenLocationAuthority = artifacts.require('TokenLocationAuthority')
 const TokenLocation = artifacts.require('TokenLocation');
 
 module.exports = {
@@ -74,7 +76,13 @@ async function initiateLand(accounts) {
     await interstellarEncoder.registerNewObjectClass(landBaseProxy.address, 1);
 
 
-    let authority = await Authority.new(landBaseProxy.address);
+    // let authority = await Authority.new(landBaseProxy.address);
+    let landBaseAuthority = await LandBaseAuthority.new();
+    let objectOwnershipAuthority = await ObjectOwnershipAuthority.new();
+    let tokenLocationAuthority = await TokenLocationAuthority.new();
+
+    await objectOwnershipAuthority.setWhitelist(landBaseProxy.address, true);
+    await tokenLocationAuthority.setWhitelist(landBaseProxy.address, true);
 
     // upgrade
     await landBaseProxy.upgradeTo(landBase.address);
@@ -84,8 +92,8 @@ async function initiateLand(accounts) {
     await ObjectOwnership.at(objectOwnershipProxy.address).initializeContract(settingsRegistry.address);
 
     // set authority
-    await tokenLocation.setAuthority(authority.address);
-    await ObjectOwnership.at(objectOwnershipProxy.address).setAuthority(authority.address);
+    await tokenLocation.setAuthority(tokenLocationAuthority.address);
+    await ObjectOwnership.at(objectOwnershipProxy.address).setAuthority(objectOwnershipAuthority.address);
     console.log('Intialize Successfully!')
 
     return {landBase: LandBase.at(landBaseProxy.address), objectOwnership:
