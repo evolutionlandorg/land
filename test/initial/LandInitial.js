@@ -64,7 +64,7 @@ async function initiateLand(accounts) {
     let landBaseId = await settingsId.CONTRACT_LAND_BASE.call();
     await settingsRegistry.setAddressProperty(landBaseId, landBaseProxy.address);
 
-    let objectOwnershipId = await settingsId.CONTRACT_TOKEN_OWNERSHIP.call();
+    let objectOwnershipId = await settingsId.CONTRACT_OBJECT_OWNERSHIP.call();
     await settingsRegistry.setAddressProperty(objectOwnershipId, objectOwnershipProxy.address);
 
     let interstellarEncoderId = await settingsId.CONTRACT_INTERSTELLAR_ENCODER.call();

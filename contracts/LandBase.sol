@@ -68,7 +68,7 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         addRole(msg.sender, ROLE_AUTH_CONTROLLER);
         registry = ISettingsRegistry(_registry);
         tokenLocation = ITokenLocation(_tokenLocation);
-        objectOwnership = ObjectOwnership(registry.addressOf(CONTRACT_TOKEN_OWNERSHIP));
+        objectOwnership = ObjectOwnership(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP));
     }
 
     /*
@@ -85,7 +85,7 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         _tokenId = objectOwnership.mintObject(_beneficiary, uint128(lastTokenId));
 
         require(!tokenLocation.hasLocation(_tokenId), "Land already have location.");
-        
+
         tokenLocation.setTokenLocation100M(_tokenId, _x, _y);
         uint256 locationId = tokenLocation.encodeLocationId100M(_x, _y);
         require(locationId2TokenId[locationId] == 0, "Land in this position already been mint.");
@@ -105,8 +105,8 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         ) public isAuth returns (uint[]){
         require(_xs.length == _ys.length, "Length of xs didn't match length of ys");
         require(
-            _xs.length == _goldRates.length && _xs.length == _woodRates.length 
-            && _xs.length == _waterRates.length && _xs.length == _fireRates.length && _xs.length == _soilRates.length, 
+            _xs.length == _goldRates.length && _xs.length == _woodRates.length
+            && _xs.length == _waterRates.length && _xs.length == _fireRates.length && _xs.length == _soilRates.length,
             "Length of postions didn't match length of land attributes");
 
         require(_xs.length == _masks.length, "Length of masks didn't match length of ys");
@@ -189,7 +189,7 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         } else {
             tokenId2LandAttr[_landTokenID].mask &= ~HASBOX;
         }
-        
+
         // TODO: emit event
     }
 
