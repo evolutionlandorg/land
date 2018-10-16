@@ -1,0 +1,104 @@
+const StandardERC223 = artifacts.require('StandardERC223');
+const InterstellarEncoder = artifacts.require('InterstellarEncoder');
+const SettingsRegistry = artifacts.require('SettingsRegistry');
+const SettingIds = artifacts.require('SettingIds');
+const LandBase = artifacts.require('LandBase');
+const ObjectOwnership = artifacts.require('ObjectOwnership');
+const Proxy = artifacts.require('OwnedUpgradeabilityProxy');
+const Authority = artifacts.require('Authority');
+const TokenLocation = artifacts.require('TokenLocation');
+
+var conf = {
+    from: '0x4cc4c344eba849dc09ac9af4bff1977e44fc1d7e',
+    settingsId_address: '0x3c7a503bd56a6afcdbe57286f2e4d8063719c73f',
+    registry_address: '0x31ff7a0106cae24756a62657660e3878dcec77dc',
+    gold_address: '0x2417a2146967cacebf67890ce8772ae260ef2985',
+    wood_address: '0x2c0fa985dc11f5dc520a621fb4b87924a81be1e5',
+    water_address: '0x83001f4d8b59b35b745414c4058ac24e127e462d',
+    fire_address: '0x6efb629ef747b9272257b32eed574c1af6cbf76b',
+    soil_address: '0x5d57b3c0befe188fb0095b538a60e7dc2590b0d3',
+    tokenLocation_address: '0x6b10af57f7b5e712af66825b82a6e9c2cd6e184d',
+    landBaseProxy_address: '0xc1e900b3bd2e79b2d0c406bdc2b03acc4b891cd5',
+    objectOwnershipProxy_address: '0xa1a9e23152230c5faa3b5a735ccac856dbb132a6',
+    settingsId_address: '0x7d1bee7c0f7a8ba3ec3d6bd4a7596a21cc0ab9c2',
+    landBase_address: '0x3a3496b235bab58e3f42d35071dcda227f1b643b',
+    objectOwnership_address: '0xde9e85ec15b2b9103a62301bf2e3b3e229ed156b',
+    authority_address: '0x233169105e0e95fe2cbca29098dcb48715b263dd',
+    interstellarEncoder_address: '0x282d2ae3395f3b47cb54d1da8efc1572252d343b'
+
+}
+let landBaseProxy;
+let objectOwnershipProxy;
+
+module.exports = async (deployer, network, accounts) => {
+    if (network != "kovan") {
+        return;
+    }
+    //
+    // deployer.deploy(SettingIds);
+    // deployer.deploy(TokenLocation);
+    // deployer.deploy(LandBase);
+    // deployer.deploy(Proxy).then(async() => {
+    //     landBaseProxy = await Proxy.deployed();
+    //     console.log("landBase proxy: ", landBaseProxy.address);
+    //     await deployer.deploy(ObjectOwnership);
+    //     await deployer.deploy(Proxy);
+    //     return Proxy.deployed();
+    // }).then(async(proxy) => {
+    // await deployer.deploy(Authority, landBaseProxy.address);
+    //     objectOwnershipProxy = await proxy;
+    //     console.log("objectOwnership proxy: ", objectOwnershipProxy.address);
+    deployer.deploy(Proxy).then(async () => {
+        let settingsId = await SettingIds.at(conf.settingsId_address);
+        let settingsRegistry = await SettingsRegistry.at(conf.registry_address);
+
+        // let goldId = await settingsId.CONTRACT_GOLD_ERC20_TOKEN.call();
+        // let woodId = await settingsId.CONTRACT_WOOD_ERC20_TOKEN.call();
+        // let waterId = await settingsId.CONTRACT_WATER_ERC20_TOKEN.call();
+        // let fireId = await settingsId.CONTRACT_FIRE_ERC20_TOKEN.call();
+        // let soilId = await settingsId.CONTRACT_SOIL_ERC20_TOKEN.call();
+        //
+        // // register resouces to registry
+        // await settingsRegistry.setAddressProperty(goldId, conf.gold_address);
+        // await settingsRegistry.setAddressProperty(woodId, conf.wood_address);
+        // await settingsRegistry.setAddressProperty(waterId, conf.water_address);
+        // await settingsRegistry.setAddressProperty(fireId, conf.fire_address);
+        // await settingsRegistry.setAddressProperty(soilId, conf.soil_address);
+
+        let interstellarEncoder = await InterstellarEncoder.at(conf.interstellarEncoder_address);
+        let interstellarEncoderId = await settingsId.CONTRACT_INTERSTELLAR_ENCODER.call();
+        await settingsRegistry.setAddressProperty(interstellarEncoderId, interstellarEncoder.address);
+
+        await interstellarEncoder.registerNewTokenContract(conf.objectOwnershipProxy_address);
+        await interstellarEncoder.registerNewObjectClass(conf.landBaseProxy_address, 1);
+
+
+        // let landBase = await LandBase.at(conf.landBase_address);
+        // let objectOwnership = await ObjectOwnership.at(conf.objectOwnership_address);
+        //
+        // landBaseProxy = await Proxy.at(conf.landBaseProxy_address);
+        // objectOwnershipProxy = await Proxy.at(conf.objectOwnershipProxy_address);
+        //
+        // let impl1 = await landBaseProxy.implementation();
+        // console.log("impl1: ", impl1);
+        //
+        // // upgrade
+        // // await landBaseProxy.upgradeTo(landBase.address);
+        // // await objectOwnershipProxy.upgradeTo(conf.objectOwnership_address);
+        // let impl2 = await objectOwnershipProxy.implementation()
+        // console.log("impl2: ", impl2);
+        //
+        // let tokenLocation = await TokenLocation.at(conf.tokenLocation_address);
+        // // await LandBase.at(landBaseProxy.address).initializeContract(conf.registry_address, tokenLocation.address);
+        // await ObjectOwnership.at(objectOwnershipProxy.address).initializeContract(conf.registry_address);
+        //
+        // // set authority
+        // let authority = await Authority.at(conf.authority_address);
+        // await tokenLocation.setAuthority(authority.address);
+        // await ObjectOwnership.at(objectOwnershipProxy.address).setAuthority(authority.address);
+        console.log('Intialize Successfully!')
+
+
+    })
+
+}

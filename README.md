@@ -1,7 +1,12 @@
 # land
 Contracts for Land
 
-# LandInfo生成规则
-goldRate + (woodRate << 16) + (waterRate << 32) + (fireRate << 48) + (soilRate << 64) + (flag << 80)
+# 生成新地块
+LandBase.assignNewLand(...)
+
+# 拍卖相关
+## 创建拍卖
+ObjectOwnership.approveAndCall(...)
+
 
 

@@ -7,7 +7,10 @@ import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/ObjectOwnership.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
 
+
 contract LandBase is RBACWithAuth, ILandBase, SettingIds {
+
+    bool private singletonLock = false;
 
     uint256 constant internal RESERVED = uint256(1);
 
@@ -37,6 +40,21 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
 
     uint256 public lastTokenId;
 
+    /*
+     *  Event
+     */
+    event ModifiedResourceRate(uint tokenId, address resourceToken, uint16 newResourceRate);
+    event HasboxSetted(uint tokenId, bool hasBox);
+
+    /*
+     *  Modifiers
+     */
+    modifier singletonLockCall() {
+        require(!singletonLock, "Only can call once");
+        _;
+        singletonLock = true;
+    }
+
     modifier xAtlantisRangeLimit(int _x) {
         require(_x >= -112 && _x <= -68, "Invalid range.");
         _;
@@ -45,6 +63,18 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
     modifier yAtlantisRangeLimit(int _y) {
         require(_y >= -22 && _y <= 22, "Invalid range.");
         _;
+    }
+
+    /**
+     * @dev Same with constructor, but is used and called by storage proxy as logic contract.
+     */
+    function initializeContract(address _registry, address _tokenLocation) public singletonLockCall {
+        // Ownable constructor
+        addRole(msg.sender, ROLE_ADMIN);
+        addRole(msg.sender, ROLE_AUTH_CONTROLLER);
+        registry = ISettingsRegistry(_registry);
+        tokenLocation = ITokenLocation(_tokenLocation);
+        objectOwnership = ObjectOwnership(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP));
     }
 
     /*
@@ -61,7 +91,7 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         _tokenId = objectOwnership.mintObject(_beneficiary, uint128(lastTokenId));
 
         require(!tokenLocation.hasLocation(_tokenId), "Land already have location.");
-        
+
         tokenLocation.setTokenLocation100M(_tokenId, _x, _y);
         uint256 locationId = tokenLocation.encodeLocationId100M(_x, _y);
         require(locationId2TokenId[locationId] == 0, "Land in this position already been mint.");
@@ -81,8 +111,8 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         ) public isAuth returns (uint[]){
         require(_xs.length == _ys.length, "Length of xs didn't match length of ys");
         require(
-            _xs.length == _goldRates.length && _xs.length == _woodRates.length 
-            && _xs.length == _waterRates.length && _xs.length == _fireRates.length && _xs.length == _soilRates.length, 
+            _xs.length == _goldRates.length && _xs.length == _woodRates.length
+            && _xs.length == _waterRates.length && _xs.length == _fireRates.length && _xs.length == _soilRates.length,
             "Length of postions didn't match length of land attributes");
 
         require(_xs.length == _masks.length, "Length of masks didn't match length of ys");
@@ -157,16 +187,18 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         tokenId2LandAttr[_landTokenID].fungibleResouceRate[_resourceToken] = _newResouceRate;
 
         // TODO: emit event
+        emit ModifiedResourceRate(_landTokenID, _resourceToken, _newResouceRate);
     }
 
-    function setHasBox(uint _landTokenID, bool isHasBox) public isAuth {
-        if (isHasBox) {
+    function setHasBox(uint _landTokenID, bool _isHasBox) public isAuth {
+        if (_isHasBox) {
             tokenId2LandAttr[_landTokenID].mask |= HASBOX;
         } else {
             tokenId2LandAttr[_landTokenID].mask &= ~HASBOX;
         }
-        
+
         // TODO: emit event
+        emit HasboxSetted(_landTokenID, _isHasBox);
     }
 
     function getResourceRate(uint _landTokenId, address _resourceToken) public view returns (uint16) {
