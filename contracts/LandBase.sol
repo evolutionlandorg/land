@@ -41,6 +41,12 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
     uint256 public lastTokenId;
 
     /*
+     *  Event
+     */
+    event ModifiedResourceRate(uint tokenId, address resourceToken, uint16 newResourceRate);
+    event HasboxSetted(uint tokenId, bool hasBox);
+
+    /*
      *  Modifiers
      */
     modifier singletonLockCall() {
@@ -181,16 +187,18 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         tokenId2LandAttr[_landTokenID].fungibleResouceRate[_resourceToken] = _newResouceRate;
 
         // TODO: emit event
+        emit ModifiedResourceRate(_landTokenID, _resourceToken, _newResouceRate);
     }
 
-    function setHasBox(uint _landTokenID, bool isHasBox) public isAuth {
-        if (isHasBox) {
+    function setHasBox(uint _landTokenID, bool _isHasBox) public isAuth {
+        if (_isHasBox) {
             tokenId2LandAttr[_landTokenID].mask |= HASBOX;
         } else {
             tokenId2LandAttr[_landTokenID].mask &= ~HASBOX;
         }
 
         // TODO: emit event
+        emit HasboxSetted(_landTokenID, _isHasBox);
     }
 
     function getResourceRate(uint _landTokenId, address _resourceToken) public view returns (uint16) {
