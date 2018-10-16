@@ -8,14 +8,17 @@ contract ILandBase {
     event ModifiedResourceRate(uint tokenId, address resourceToken, uint16 newResourceRate);
     event HasboxSetted(uint tokenId, bool hasBox);
 
-    function modifyResourceRate(uint _landTokenID, address _resourceToken, uint16 _newResouceRate) public;
-
+    function defineResouceTokenRateAttrId(address _resourceToken, uint8 _attrId) public;
 
     function setHasBox(uint _landTokenID, bool isHasBox) public;
     function isReserved(uint256 _tokenId) public view returns (bool);
     function isSpecial(uint256 _tokenId) public view returns (bool);
     function isHasBox(uint256 _tokenId) public view returns (bool);
 
+    function getResourceRateAttr(uint _landTokenId) public view returns (uint256);
+    function setResourceRateAttr(uint _landTokenId, uint256 _newResourceRateAttr) public;
+
     function getResourceRate(uint _landTokenId, address _resouceToken) public view returns (uint16);
+    function setResourceRate(uint _landTokenID, address _resourceToken, uint16 _newResouceRate) public;
 
 }
