@@ -39,14 +39,11 @@ contract('Land series contracts', async (accounts) => {
     })
 
     it('test initialization', async () => {
-
-        let objectInLand = await landBase.objectOwnership();
-        console.log("objectInLand: ", objectInLand);
         let cancall1 = await Authority.at(await objectOwnership.authority()).canCall(landBase.address, objectOwnership.address,
             web3.eth.abi.encodeFunctionSignature('mintObject(address,uint128)'));
         assert(cancall1, 'cancall1 should be true');
         let cancall2 = await Authority.at(await tokenLocation.authority()).canCall(landBase.address, tokenLocation.address,
-            web3.eth.abi.encodeFunctionSignature('setTokenLocation100M(uint256,int256,int256)'));
+            web3.eth.abi.encodeFunctionSignature('setTokenLocationHM(uint256,int256,int256)'));
         assert(cancall2, 'cancall2 should be true');
     })
 

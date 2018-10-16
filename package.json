@@ -1,13 +1,14 @@
 {
   "name": "@evolutionland/land",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Land Contracts for Evolution Land",
   "main": "truffle-config.js",
   "directories": {
     "test": "test"
   },
   "dependencies": {
-    "@evolutionland/common": "^1.1.10",
+    "@evolutionland/common": "^1.1.12",
+    "@evolutionland/upgraeability-using-unstructured-storage": "^0.1.1",
     "babel-polyfill": "^6.26.0",
     "babel-preset-es2015": "^6.18.0",
     "babel-preset-stage-2": "^6.24.1",
@@ -18,8 +19,7 @@
     "solc": "^0.4.24",
     "truffle-hdwallet-provider": "0.0.5",
     "truffle-privatekey-provider": "^0.1.0",
-    "web3": "^1.0.0-beta.34",
-    "@evolutionland/upgraeability-using-unstructured-storage": "^0.1.1"
+    "web3": "^1.0.0-beta.34"
   },
   "devDependencies": {},
   "repository": {

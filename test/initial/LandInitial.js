@@ -53,6 +53,9 @@ async function initiateLand(accounts) {
     let landBaseProxy = await Proxy.new();
     console.log('landBaseProxy address : ', landBaseProxy.address);
 
+    let tokenLocationId = await settingsId.CONTRACT_TOKEN_LOCATION.call();
+    await settingsRegistry.setAddressProperty(tokenLocationId, tokenLocation.address);
+
     // new TokenOwnerShip
     let objectOwnership = await ObjectOwnership.new();
     console.log('objectOwnership implementation: ', await objectOwnership.address);
@@ -88,8 +91,8 @@ async function initiateLand(accounts) {
     await landBaseProxy.upgradeTo(landBase.address);
     await objectOwnershipProxy.upgradeTo(objectOwnership.address);
 
-    await LandBase.at(landBaseProxy.address).initializeContract(settingsRegistry.address, tokenLocation.address);
     await ObjectOwnership.at(objectOwnershipProxy.address).initializeContract(settingsRegistry.address);
+    await LandBase.at(landBaseProxy.address).initializeContract(settingsRegistry.address);
 
     // set authority
     await tokenLocation.setAuthority(tokenLocationAuthority.address);

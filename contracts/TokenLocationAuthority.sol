@@ -14,6 +14,6 @@ contract TokenLocationAuthority is Ownable, IAuthority {
     function canCall(
         address _src, address _dst, bytes4 _sig
     ) public view returns (bool) {
-        return ( whiteList[_src] && _sig == bytes4(keccak256("setTokenLocation100M(uint256,int256,int256)"))) ;
+        return ( whiteList[_src] && _sig == bytes4(keccak256("setTokenLocationHM(uint256,int256,int256)"))) ;
     }
 }
