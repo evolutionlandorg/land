@@ -74,7 +74,9 @@ async function initiateLand(accounts) {
     await interstellarEncoder.registerNewObjectClass(landBaseProxy.address, 1);
 
 
-    let authority = await Authority.new(landBaseProxy.address);
+    // let authority = await Authority.new(landBaseProxy.address);
+    let authority = await Authority.new();
+    await authority.setWhitelist(landBaseProxy.address, true);
 
     // upgrade
     await landBaseProxy.upgradeTo(landBase.address);
