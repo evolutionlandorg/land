@@ -43,13 +43,13 @@ async function initiateLand(accounts) {
     await settingsRegistry.setAddressProperty(fireId, fire.address);
     await settingsRegistry.setAddressProperty(soilId, soil.address);
 
-
-
     // new LandBase
     let tokenLocation = await TokenLocation.new();
     console.log('tokenLocation address : ', tokenLocation.address);
     let landBase = await LandBase.new({gas: 6000000});
     console.log('landBase address : ', landBase.address);
+
+    
     let landBaseProxy = await Proxy.new();
     console.log('landBaseProxy address : ', landBaseProxy.address);
 

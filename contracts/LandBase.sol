@@ -8,7 +8,7 @@ import "@evolutionland/common/contracts/interfaces/ITokenLocation.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/ObjectOwnership.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
-
+import "@evolutionland/common/contracts/LocationCoder.sol";
 
 contract LandBase is RBACWithAuth, ILandBase, SettingIds {
 
@@ -80,12 +80,6 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         resourceToken2RateAttrId[registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN)] = 5;
     }
 
-    function defineResouceTokenRateAttrId(address _resourceToken, uint8 _attrId) public isAuth {
-        require(_attrId > 0 && _attrId <= 16, "Invalid Attr Id.");
-
-        resourceToken2RateAttrId[_resourceToken] = _attrId;
-    }
-
     /*
      * @dev assign new land
      */
@@ -100,7 +94,7 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         _tokenId = IObjectOwnership(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).mintObject(_beneficiary, uint128(lastLandObjectId));
 
         // update locations.
-        uint256 locationId = ITokenLocation(registry.addressOf(CONTRACT_TOKEN_LOCATION)).encodeLocationIdHM(_x, _y);
+        uint256 locationId = LocationCoder.encodeLocationIdHM(_x, _y);
         require(locationId2TokenId[locationId] == 0, "Land in this position already been mint.");
         locationId2TokenId[locationId] = _tokenId;
         ITokenLocation(registry.addressOf(CONTRACT_TOKEN_LOCATION)).setTokenLocationHM(_tokenId, _x, _y);
@@ -125,20 +119,26 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         return _tokenIds;
     }
 
+    function defineResouceTokenRateAttrId(address _resourceToken, uint8 _attrId) public isAuth {
+        require(_attrId > 0 && _attrId <= 16, "Invalid Attr Id.");
+
+        resourceToken2RateAttrId[_resourceToken] = _attrId;
+    }
+
     // encode (x,y) to get tokenId
     function getTokenIdByLocation(int _x, int _y) public view returns (uint256) {
-        uint locationId = ITokenLocation(registry.addressOf(CONTRACT_TOKEN_LOCATION)).encodeLocationIdHM(_x, _y);
+        uint locationId = LocationCoder.encodeLocationIdHM(_x, _y);
         return locationId2TokenId[locationId];
     }
 
     function exists(int _x, int _y) public view returns (bool) {
-        uint locationId = ITokenLocation(registry.addressOf(CONTRACT_TOKEN_LOCATION)).encodeLocationIdHM(_x, _y);
+        uint locationId = LocationCoder.encodeLocationIdHM(_x, _y);
         uint tokenId = locationId2TokenId[locationId];
         return ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).exists(tokenId);
     }
 
     function ownerOfLand(int _x, int _y) public view returns (address) {
-        uint locationId = ITokenLocation(registry.addressOf(CONTRACT_TOKEN_LOCATION)).encodeLocationIdHM(_x, _y);
+        uint locationId = LocationCoder.encodeLocationIdHM(_x, _y);
         uint tokenId = locationId2TokenId[locationId];
         return ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(tokenId);
     }
@@ -204,13 +204,14 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
     function getResourceRate(uint _landTokenId, address _resourceToken) public view returns (uint16) {
         require(resourceToken2RateAttrId[_resourceToken] > 0, "Reource token doesn't exist.");
 
-        return uint16((tokenId2LandAttr[_landTokenId].resourceRateAttr >> (resourceToken2RateAttrId[_resourceToken] - 1)) & CLEAR_RATE_HIGH);
+        uint moveRight = (16 * (resourceToken2RateAttrId[_resourceToken] - 1));
+        return uint16((tokenId2LandAttr[_landTokenId].resourceRateAttr >> moveRight) & CLEAR_RATE_HIGH);
     }
 
     function setResourceRate(uint _landTokenId, address _resourceToken, uint16 _newResouceRate) public isAuth {
         require(resourceToken2RateAttrId[_resourceToken] > 0, "Reource token doesn't exist.");
 
-        tokenId2LandAttr[_landTokenId].resourceRateAttr |= (uint256(_newResouceRate) << (resourceToken2RateAttrId[_resourceToken] - 1));
+        tokenId2LandAttr[_landTokenId].resourceRateAttr |= (uint256(_newResouceRate) << (16 * (resourceToken2RateAttrId[_resourceToken] - 1)));
         emit ModifiedResourceRate(_landTokenId, _resourceToken, _newResouceRate);
     }
 }
