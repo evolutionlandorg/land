@@ -46,17 +46,17 @@ contract('Land series contracts', async (accounts) => {
             web3.eth.abi.encodeFunctionSignature('mintObject(address,uint128)'));
         assert(cancall1, 'cancall1 should be true');
         let cancall2 = await Authority.at(await tokenLocation.authority()).canCall(landBase.address, tokenLocation.address,
-            web3.eth.abi.encodeFunctionSignature('setTokenLocation(uint256,int256,int256)'));
+            web3.eth.abi.encodeFunctionSignature('setTokenLocation100M(uint256,int256,int256)'));
         assert(cancall2, 'cancall2 should be true');
     })
 
     it('assign new land', async () => {
-        let tokenId = await landBase.assignNewLand(-90, 12, from, 100, 99, 98, 97, 96, 4);
+        let tokenId = await landBase.assignNewLand(-90, 13, from, 100, 99, 98, 97, 96, 4);
         console.log("tokenId: ", tokenId.valueOf());
-        // let tokenOne = await interstellarEncoder.encodeTokenIdForObjectContract(objectOwnership.address, landBase.address, 1);
-        // console.log("tokenOne: ", tokenOne.valueOf());
-        // let owner = await objectOwnership.ownerOf(tokenOne);
-        // assert.equal(owner, from);
+        let tokenOne = await interstellarEncoder.encodeTokenIdForObjectContract(objectOwnership.address, landBase.address, 1);
+        console.log("tokenOne: ", tokenOne.valueOf());
+        let owner = await objectOwnership.ownerOf(tokenOne);
+        assert.equal(owner, from);
     })
 
 })

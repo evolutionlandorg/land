@@ -15,6 +15,6 @@ contract Authority is IAuthority {
     ) public view returns (bool) {
         return ( _src == landBase && _sig == bytes4(keccak256("mintObject(address,uint128)")) ) ||
             ( _src == landBase && _sig == bytes4(keccak256("burnObject(address,uint128)")) ) ||
-            ( _src == landBase && _sig == bytes4(keccak256("setTokenLocation(uint256,int256,int256)")));
+            ( _src == landBase && _sig == bytes4(keccak256("setTokenLocation100M(uint256,int256,int256)")));
     }
 }

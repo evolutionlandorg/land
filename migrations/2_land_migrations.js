@@ -17,14 +17,12 @@ let soil_address;
 let landBaseProxy_address;
 let objectOwnershipProxy_address;
 
-let settingIds;
-let settingsRegistry;
-
 module.exports = async (deployer, network, accounts) => {
-    if (network == "development") {
+    if (network != "development") {
         return;
     }
-    deployer.deploy(StandardERC223, "GOLD").then(async() => {
+    deployer.deploy(StandardERC223, "GOLD"
+    ).then(async() => {
         let gold = await StandardERC223.deployed();
         gold_address = gold.address;
         return deployer.deploy(StandardERC223, "WOOD")
@@ -43,8 +41,6 @@ module.exports = async (deployer, network, accounts) => {
     }).then(async() => {
         let soil = await StandardERC223.deployed();
         soil_address = soil.address;
-        settingIds = await SettingIds.deployed();
-        settingsRegistry = await SettingsRegistry.deployed();
         await deployer.deploy(SettingIds);
         await deployer.deploy(SettingsRegistry);
         await deployer.deploy(TokenLocation);
@@ -65,6 +61,9 @@ module.exports = async (deployer, network, accounts) => {
         console.log("objectOwnership proxy: ", objectOwnershipProxy_address);
         await deployer.deploy(InterstellarEncoder);
     }).then(async () => {
+
+        let settingIds = await SettingIds.deployed();
+        let settingsRegistry = await SettingsRegistry.deployed();
 
         let goldId = await settingIds.CONTRACT_GOLD_ERC20_TOKEN.call();
         let woodId = await settingIds.CONTRACT_WOOD_ERC20_TOKEN.call();
@@ -92,7 +91,7 @@ module.exports = async (deployer, network, accounts) => {
 
         // register in registry
         let objectOwnershipId = await settingIds.CONTRACT_OBJECT_OWNERSHIP.call();
-        let landBaseId = await settingsId.CONTRACT_LAND_BASE.call();
+        let landBaseId = await settingIds.CONTRACT_LAND_BASE.call();
         await settingsRegistry.setAddressProperty(landBaseId,landBaseProxy_address);
         await settingsRegistry.setAddressProperty(objectOwnershipId, objectOwnershipProxy_address);
 
