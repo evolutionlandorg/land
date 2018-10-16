@@ -5,7 +5,9 @@ const SettingIds = artifacts.require('SettingIds');
 const LandBase = artifacts.require('LandBase');
 const ObjectOwnership = artifacts.require('ObjectOwnership');
 const Proxy = artifacts.require('OwnedUpgradeabilityProxy');
-const Authority = artifacts.require('Authority');
+const LandBaseAuthority = artifacts.require('LandBaseAuthority');
+const ObjectOwnershipAuthority = artifacts.require('ObjectOwnershipAuthority');
+const TokenLocationAuthority = artifacts.require('TokenLocationAuthority')
 const TokenLocation = artifacts.require('TokenLocation');
 
 let gold_address;
@@ -21,6 +23,9 @@ module.exports = async (deployer, network, accounts) => {
     if (network != "development") {
         return;
     }
+    // deployer.deploy(LandBaseAuthority);
+    deployer.deploy(ObjectOwnershipAuthority);
+    deployer.deploy(TokenLocationAuthority);
     deployer.deploy(StandardERC223, "GOLD"
     ).then(async() => {
         let gold = await StandardERC223.deployed();
@@ -51,7 +56,6 @@ module.exports = async (deployer, network, accounts) => {
         let landBaseProxy = await Proxy.deployed();
         landBaseProxy_address = landBaseProxy.address;
         console.log("landBase proxy: ", landBaseProxy_address);
-        await deployer.deploy(Authority, landBaseProxy_address);
         await deployer.deploy(Proxy);
         return Proxy.deployed();
     }).then(async() => {
@@ -89,6 +93,11 @@ module.exports = async (deployer, network, accounts) => {
         let landBase = await LandBase.deployed();
         let objectOwnership = await ObjectOwnership.deployed();
 
+        let objectOwnershipAuthority = await ObjectOwnershipAuthority.deployed();
+        let tokenLocationAuthority = await TokenLocationAuthority.deployed();
+        await objectOwnershipAuthority.setWhitelist(landBaseProxy_address, true);
+        await tokenLocationAuthority.setWhitelist(landBaseProxy_address, true);
+
         // register in registry
         let objectOwnershipId = await settingIds.CONTRACT_OBJECT_OWNERSHIP.call();
         let landBaseId = await settingIds.CONTRACT_LAND_BASE.call();
@@ -110,9 +119,8 @@ module.exports = async (deployer, network, accounts) => {
         await ObjectOwnership.at(objectOwnershipProxy_address).initializeContract(settingsRegistry.address);
 
         // set authority
-        let authority = await Authority.deployed();
-        await tokenLocation.setAuthority(authority.address);
-        await ObjectOwnership.at(objectOwnershipProxy_address).setAuthority(authority.address);
+        await tokenLocation.setAuthority(tokenLocationAuthority.address);
+        await ObjectOwnership.at(objectOwnershipProxy_address).setAuthority(objectOwnershipAuthority.address);
         console.log('Intialize Successfully!')
 
 
