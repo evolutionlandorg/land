@@ -50,12 +50,12 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
     }
 
     modifier xAtlantisRangeLimit(int _x) {
-        require( _x >= -112 &&  _x <= -68);
+        require(_x >= -112 && _x <= -68, "Invalid range.");
         _;
     }
 
     modifier yAtlantisRangeLimit(int _y) {
-        require(_y >= -22 && _y <= 22);
+        require(_y >= -22 && _y <= 22, "Invalid range.");
         _;
     }
 
@@ -77,6 +77,7 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
     function assignNewLand(
         int _x, int _y, address _beneficiary, uint16 _goldRate, uint16 _woodRate, uint16 _waterRate, uint16 _fireRate, uint16 _soilRate, uint256 _mask
         ) public isAuth xAtlantisRangeLimit(_x) yAtlantisRangeLimit(_y) returns (uint _tokenId) {
+
         // auto increase token id, start from 1
         lastTokenId += 1;
         require(lastTokenId <= 340282366920938463463374607431768211455, "Can not be stored with 128 bits.");
@@ -85,8 +86,8 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
 
         require(!tokenLocation.hasLocation(_tokenId), "Land already have location.");
         
-        tokenLocation.setTokenLocation(_tokenId, _x, _y);
-        uint256 locationId = tokenLocation.encodeLocationId(_x, _y);
+        tokenLocation.setTokenLocation100M(_tokenId, _x, _y);
+        uint256 locationId = tokenLocation.encodeLocationId100M(_x, _y);
         require(locationId2TokenId[locationId] == 0, "Land in this position already been mint.");
         locationId2TokenId[locationId] = _tokenId;
 
@@ -121,36 +122,20 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         return _tokenIds;
     }
 
-    function modifyResourceRate(uint _landTokenID, address _resourceToken, uint16 _newResouceRate) public isAuth {
-        tokenId2LandAttr[_landTokenID].fungibleResouceRate[_resourceToken] = _newResouceRate;
-
-        // TODO: emit event
-    }
-
-    function setHasBox(uint _landTokenID, bool isHasBox) public isAuth {
-        if (isHasBox) {
-            tokenId2LandAttr[_landTokenID].mask |= HASBOX;
-        } else {
-            tokenId2LandAttr[_landTokenID].mask &= ~HASBOX;
-        }
-        
-        // TODO: emit event
-    }
-
-        // encode (x,y) to get tokenId
+    // encode (x,y) to get tokenId
     function getTokenIdByLocation(int _x, int _y) public view returns (uint256) {
-        uint locationId = tokenLocation.encodeLocationId(_x, _y);
+        uint locationId = tokenLocation.encodeLocationId100M(_x, _y);
         return locationId2TokenId[locationId];
     }
 
     function exists(int _x, int _y) public view returns (bool) {
-        uint locationId = tokenLocation.encodeLocationId(_x, _y);
+        uint locationId = tokenLocation.encodeLocationId100M(_x, _y);
         uint tokenId = locationId2TokenId[locationId];
         return objectOwnership.exists(tokenId);
     }
 
     function ownerOfLand(int _x, int _y) public view returns (address) {
-        uint locationId = tokenLocation.encodeLocationId(_x, _y);
+        uint locationId = tokenLocation.encodeLocationId100M(_x, _y);
         uint tokenId = locationId2TokenId[locationId];
         return objectOwnership.ownerOf(tokenId);
     }
@@ -174,13 +159,13 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
 
         for(uint i = 0; i < length; i++) {
             uint tokenId = objectOwnership.tokenOfOwnerByIndex(_landholder, i);
-            (x[i], y[i]) = tokenLocation.getTokenLocation(tokenId);
+            (x[i], y[i]) = tokenLocation.getTokenLocation100M(tokenId);
         }
 
         return (x, y);
     }
 
-    function hasBox(uint256 _landTokenID) public view returns (bool) {
+    function isHasBox(uint256 _landTokenID) public view returns (bool) {
         return (tokenId2LandAttr[_landTokenID].mask & HASBOX) != 0;
     }
 
@@ -190,6 +175,22 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
 
     function isSpecial(uint256 _landTokenID) public view returns (bool) {
         return (tokenId2LandAttr[_landTokenID].mask & SPECIAL) != 0;
+    }
+
+    function modifyResourceRate(uint _landTokenID, address _resourceToken, uint16 _newResouceRate) public isAuth {
+        tokenId2LandAttr[_landTokenID].fungibleResouceRate[_resourceToken] = _newResouceRate;
+
+        // TODO: emit event
+    }
+
+    function setHasBox(uint _landTokenID, bool isHasBox) public isAuth {
+        if (isHasBox) {
+            tokenId2LandAttr[_landTokenID].mask |= HASBOX;
+        } else {
+            tokenId2LandAttr[_landTokenID].mask &= ~HASBOX;
+        }
+        
+        // TODO: emit event
     }
 
     function getResourceRate(uint _landTokenId, address _resourceToken) public view returns (uint16) {
