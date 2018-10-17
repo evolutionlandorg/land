@@ -9,6 +9,7 @@ const LandBaseAuthority = artifacts.require('LandBaseAuthority');
 const ObjectOwnershipAuthority = artifacts.require('ObjectOwnershipAuthority');
 const TokenLocationAuthority = artifacts.require('TokenLocationAuthority')
 const TokenLocation = artifacts.require('TokenLocation');
+const LocationCoder = artifacts.require("./LocationCoder.sol");
 
 let gold_address;
 let wood_address;
@@ -20,9 +21,14 @@ let landBaseProxy_address;
 let objectOwnershipProxy_address;
 
 module.exports = async (deployer, network, accounts) => {
+    await deployer.deploy(LocationCoder);
+    await deployer.link(LocationCoder, TokenLocation);
+    await deployer.link(LocationCoder, LandBase);
+
     if (network != "development") {
         return;
     }
+
     // deployer.deploy(LandBaseAuthority);
     deployer.deploy(ObjectOwnershipAuthority);
     deployer.deploy(TokenLocationAuthority);
@@ -115,7 +121,7 @@ module.exports = async (deployer, network, accounts) => {
 
         let tokenLocation = await TokenLocation.deployed();
         let landProxy = await LandBase.at(landBaseProxy_address);
-        landProxy.initializeContract(settingsRegistry.address, tokenLocation.address);
+        landProxy.initializeContract(settingsRegistry.address);
         await ObjectOwnership.at(objectOwnershipProxy_address).initializeContract(settingsRegistry.address);
 
         // set authority
