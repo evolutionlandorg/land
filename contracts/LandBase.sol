@@ -197,17 +197,6 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         return tokenId2LandAttr[_landTokenId].resourceRateAttr;
     }
 
-    function getLandAttr(uint _landTokenId) public view returns (uint16, uint16, uint16, uint16, uint16, uint256) {
-        uint resourceRateAttr = tokenId2LandAttr[_landTokenId].resourceRateAttr;
-        uint16 goldRate = uint16(resourceRateAttr & 0xffff);
-        uint16 woodRate = uint16((resourceRateAttr & (0xffff << 16)) >> 16);
-        uint16 waterRate = uint16((resourceRateAttr & (0xffff << 32)) >> 32);
-        uint16 fireRate = uint16((resourceRateAttr & (0xffff << 48)) >> 48);
-        uint16 soilRate = uint16((resourceRateAttr & (0xffff) << 64) >> 64);
-        uint256 mask = tokenId2LandAttr[_landTokenId].mask;
-        return (goldRate, woodRate, waterRate, fireRate, soilRate, mask);
-    }
-
     function setResourceRateAttr(uint _landTokenId, uint256 _newResourceRateAttr) public isAuth {
         tokenId2LandAttr[_landTokenId].resourceRateAttr = _newResourceRateAttr;
     }
