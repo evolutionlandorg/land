@@ -197,6 +197,17 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         return tokenId2LandAttr[_landTokenId].resourceRateAttr;
     }
 
+    function getLandAttr(uint _landTokenId) public view returns (uint16, uint16, uint16, uint16, uint16, uint256) {
+        uint resourceRateAttr = tokenId2LandAttr[_landTokenId].resourceRateAttr;
+        uint16 goldRate = uint16(resourceRateAttr & 0xffff);
+        uint16 woodRate = uint16((resourceRateAttr & (0xffff << 16)) >> 16);
+        uint16 waterRate = uint16((resourceRateAttr & (0xffff << 32)) >> 32);
+        uint16 fireRate = uint16((resourceRateAttr & (0xffff << 48)) >> 48);
+        uint16 soilRate = uint16((resourceRateAttr & (0xffff) << 64) >> 64);
+        uint256 mask = tokenId2LandAttr[_landTokenId].mask;
+        return (goldRate, woodRate, waterRate, fireRate, soilRate, mask);
+    }
+
     function setResourceRateAttr(uint _landTokenId, uint256 _newResourceRateAttr) public isAuth {
         tokenId2LandAttr[_landTokenId].resourceRateAttr = _newResourceRateAttr;
     }
@@ -210,18 +221,8 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
 
     function setResourceRate(uint _landTokenId, address _resourceToken, uint16 _newResouceRate) public isAuth {
         require(resourceToken2RateAttrId[_resourceToken] > 0, "Reource token doesn't exist.");
-
-        tokenId2LandAttr[_landTokenId].resourceRateAttr |= (uint256(_newResouceRate) << (16 * (resourceToken2RateAttrId[_resourceToken] - 1)));
+        tokenId2LandAttr[_landTokenId].resourceRateAttr &= uint256(~(0xffff << (16 * (resourceToken2RateAttrId[_resourceToken] - 1))));
+        tokenId2LandAttr[_landTokenId].resourceRateAttr |= uint256(_newResouceRate) << (16 * (resourceToken2RateAttrId[_resourceToken] - 1));
         emit ModifiedResourceRate(_landTokenId, _resourceToken, _newResouceRate);
-    }
-
-    function getLandAttr(uint _landTokenId) public view returns (uint16, uint16, uint16, uint16, uint16, uint256) {
-        uint16 goldRate = tokenId2LandAttr[_landTokenId].fungibleResouceRate[registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN)];
-        uint16 woodRate = tokenId2LandAttr[_landTokenId].fungibleResouceRate[registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN)];
-        uint16 waterRate = tokenId2LandAttr[_landTokenId].fungibleResouceRate[registry.addressOf(CONTRACT_WATER_ERC20_TOKEN)];
-        uint16 fireRate = tokenId2LandAttr[_landTokenId].fungibleResouceRate[registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN)];
-        uint16 soilRate = tokenId2LandAttr[_landTokenId].fungibleResouceRate[registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN)];
-        uint256 mask = tokenId2LandAttr[_landTokenId].mask;
-        return (goldRate, woodRate, waterRate, fireRate, soilRate, mask);
     }
 }
