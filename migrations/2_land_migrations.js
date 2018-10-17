@@ -19,13 +19,14 @@ let soil_address;
 
 let landBaseProxy_address;
 let objectOwnershipProxy_address;
+let tokenLocationProxy_address
 
 module.exports = async (deployer, network, accounts) => {
-    await deployer.deploy(LocationCoder);
-    await deployer.link(LocationCoder, TokenLocation);
-    await deployer.link(LocationCoder, LandBase);
+    deployer.deploy(LocationCoder);
+    deployer.link(LocationCoder, TokenLocation);
+    deployer.link(LocationCoder, LandBase);
 
-    if (network != "development") {
+    if (network == "development") {
         return;
     }
 
@@ -55,8 +56,11 @@ module.exports = async (deployer, network, accounts) => {
         await deployer.deploy(SettingIds);
         await deployer.deploy(SettingsRegistry);
         await deployer.deploy(TokenLocation);
+        await deployer.deploy(Proxy);
         await deployer.deploy(LandBase)
     }).then(async () => {
+        let tokenLocationProxy = await Proxy.deployed();
+        tokenLocationProxy_address = tokenLocationProxy.address;
         return deployer.deploy(Proxy);
     }).then(async() => {
         let landBaseProxy = await Proxy.deployed();
@@ -98,6 +102,7 @@ module.exports = async (deployer, network, accounts) => {
 
         let landBase = await LandBase.deployed();
         let objectOwnership = await ObjectOwnership.deployed();
+        let tokenLocation = await TokenLocation.deployed();
 
         let objectOwnershipAuthority = await ObjectOwnershipAuthority.deployed();
         let tokenLocationAuthority = await TokenLocationAuthority.deployed();
@@ -107,28 +112,34 @@ module.exports = async (deployer, network, accounts) => {
         // register in registry
         let objectOwnershipId = await settingIds.CONTRACT_OBJECT_OWNERSHIP.call();
         let landBaseId = await settingIds.CONTRACT_LAND_BASE.call();
+        let tokenLocationId = await settingIds.CONTRACT_TOKEN_LOCATION.call();
         await settingsRegistry.setAddressProperty(landBaseId,landBaseProxy_address);
         await settingsRegistry.setAddressProperty(objectOwnershipId, objectOwnershipProxy_address);
+        await settingsRegistry.setAddressProperty(tokenLocationId, tokenLocationProxy_address);
 
         // upgrade
         await Proxy.at(landBaseProxy_address).upgradeTo(landBase.address);
         await Proxy.at(objectOwnershipProxy_address).upgradeTo(objectOwnership.address);
+        await Proxy.at(tokenLocationProxy_address).upgradeTo(tokenLocation.address);
 
-        let impl1 = await Proxy.at(landBaseProxy_address).implementation();
-        console.log("impl1: ", impl1);
-        let impl2 = await Proxy.at(objectOwnershipProxy_address).implementation()
-        console.log("impl2: ", impl2);
+        // verify proxies' implementations
+        let landBase_impl = await Proxy.at(landBaseProxy_address).implementation();
+        console.log("landBase_impl: ", landBase_impl);
+        let objectOwnership_impl = await Proxy.at(objectOwnershipProxy_address).implementation()
+        console.log("objectOwnership_impl: ", objectOwnership_impl);
+        let tokenLocation_impl = await Proxy.at(tokenLocationProxy_address).implementation();
+        console.log("tokenLocation_impl: ", tokenLocation_impl);
 
-        let tokenLocation = await TokenLocation.deployed();
+        let tokenLocationProxy = await TokenLocation.at(tokenLocationProxy_address);
+        await tokenLocationProxy.initializeContract();
         let landProxy = await LandBase.at(landBaseProxy_address);
         landProxy.initializeContract(settingsRegistry.address);
         await ObjectOwnership.at(objectOwnershipProxy_address).initializeContract(settingsRegistry.address);
 
         // set authority
-        await tokenLocation.setAuthority(tokenLocationAuthority.address);
+        await tokenLocationProxy.setAuthority(tokenLocationAuthority.address);
         await ObjectOwnership.at(objectOwnershipProxy_address).setAuthority(objectOwnershipAuthority.address);
         console.log('Intialize Successfully!')
-
 
     })
 
