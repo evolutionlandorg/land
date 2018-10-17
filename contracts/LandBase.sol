@@ -210,8 +210,8 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
 
     function setResourceRate(uint _landTokenId, address _resourceToken, uint16 _newResouceRate) public isAuth {
         require(resourceToken2RateAttrId[_resourceToken] > 0, "Reource token doesn't exist.");
-
-        tokenId2LandAttr[_landTokenId].resourceRateAttr |= (uint256(_newResouceRate) << (16 * (resourceToken2RateAttrId[_resourceToken] - 1)));
+        tokenId2LandAttr[_landTokenId].resourceRateAttr &= uint256(~(0xffff << (16 * (resourceToken2RateAttrId[_resourceToken] - 1))));
+        tokenId2LandAttr[_landTokenId].resourceRateAttr |= uint256(_newResouceRate) << (16 * (resourceToken2RateAttrId[_resourceToken] - 1));
         emit ModifiedResourceRate(_landTokenId, _resourceToken, _newResouceRate);
     }
 }
