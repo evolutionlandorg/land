@@ -10,6 +10,8 @@ contract ILandBase {
 
     event ChangedReourceRateAttr(uint indexed tokenId, uint256 attr);
 
+    event ChangedFlagMask(uint indexed tokenId, uint256 newFlagMask);
+
     event CreatedNewLand(uint indexed tokenId, int x, int y, address beneficiary, uint256 resourceRateAttr, uint256 mask);
 
     function defineResouceTokenRateAttrId(address _resourceToken, uint8 _attrId) public;
@@ -24,5 +26,9 @@ contract ILandBase {
 
     function getResourceRate(uint _landTokenId, address _resouceToken) public view returns (uint16);
     function setResourceRate(uint _landTokenID, address _resourceToken, uint16 _newResouceRate) public;
+
+    function getFlagMask(uint _landTokenId) public view returns (uint256);
+
+    function setFlagMask(uint _landTokenId, uint256 _newFlagMask) public;
 
 }

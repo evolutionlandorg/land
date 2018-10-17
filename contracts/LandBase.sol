@@ -205,8 +205,17 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
         emit ChangedReourceRateAttr(_landTokenId, _newResourceRateAttr);
     }
 
+    function getFlagMask(uint _landTokenId) public view returns (uint256) {
+        return tokenId2LandAttr[_landTokenId].mask;
+    }
+
+    function setFlagMask(uint _landTokenId, uint256 _newFlagMask) public isAuth {
+        tokenId2LandAttr[_landTokenId].mask = _newFlagMask;
+        emit ChangedFlagMask(_landTokenId, _newFlagMask);
+    }
+
     function getResourceRate(uint _landTokenId, address _resourceToken) public view returns (uint16) {
-        require(resourceToken2RateAttrId[_resourceToken] > 0, "Reource token doesn't exist.");
+        require(resourceToken2RateAttrId[_resourceToken] > 0, "Resource token doesn't exist.");
 
         uint moveRight = (16 * (resourceToken2RateAttrId[_resourceToken] - 1));
         return uint16((tokenId2LandAttr[_landTokenId].resourceRateAttr >> moveRight) & CLEAR_RATE_HIGH);
