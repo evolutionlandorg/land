@@ -204,4 +204,14 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
     function getResourceRate(uint _landTokenId, address _resourceToken) public view returns (uint16) {
         return tokenId2LandAttr[_landTokenId].fungibleResouceRate[_resourceToken];
     }
+
+    function getLandAttr(uint _landTokenId) public view returns (uint16, uint16, uint16, uint16, uint16, uint256) {
+        uint16 goldRate = tokenId2LandAttr[_landTokenId].fungibleResouceRate[registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN)];
+        uint16 woodRate = tokenId2LandAttr[_landTokenId].fungibleResouceRate[registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN)];
+        uint16 waterRate = tokenId2LandAttr[_landTokenId].fungibleResouceRate[registry.addressOf(CONTRACT_WATER_ERC20_TOKEN)];
+        uint16 fireRate = tokenId2LandAttr[_landTokenId].fungibleResouceRate[registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN)];
+        uint16 soilRate = tokenId2LandAttr[_landTokenId].fungibleResouceRate[registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN)];
+        uint256 mask = tokenId2LandAttr[_landTokenId].mask;
+        return (goldRate, woodRate, waterRate, fireRate, soilRate, mask);
+    }
 }
