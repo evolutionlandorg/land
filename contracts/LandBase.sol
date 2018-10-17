@@ -101,6 +101,8 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
 
         tokenId2LandAttr[_tokenId].resourceRateAttr = _resourceRateAttr;
         tokenId2LandAttr[_tokenId].mask = _mask;
+
+        emit CreatedNewLand(_tokenId, _x, _y, _beneficiary, _resourceRateAttr, _mask);
     }
 
     function assignMultipleLands(
@@ -199,6 +201,8 @@ contract LandBase is RBACWithAuth, ILandBase, SettingIds {
 
     function setResourceRateAttr(uint _landTokenId, uint256 _newResourceRateAttr) public isAuth {
         tokenId2LandAttr[_landTokenId].resourceRateAttr = _newResourceRateAttr;
+
+        emit ChangedReourceRateAttr(_landTokenId, _newResourceRateAttr);
     }
 
     function getResourceRate(uint _landTokenId, address _resourceToken) public view returns (uint16) {

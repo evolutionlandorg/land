@@ -5,8 +5,12 @@ contract ILandBase {
     /*
      *  Event
      */
-    event ModifiedResourceRate(uint tokenId, address resourceToken, uint16 newResourceRate);
-    event HasboxSetted(uint tokenId, bool hasBox);
+    event ModifiedResourceRate(uint indexed tokenId, address resourceToken, uint16 newResourceRate);
+    event HasboxSetted(uint indexed tokenId, bool hasBox);
+
+    event ChangedReourceRateAttr(uint indexed tokenId, uint256 attr);
+
+    event CreatedNewLand(uint indexed tokenId, int x, int y, address beneficiary, uint256 resourceRateAttr, uint256 mask);
 
     function defineResouceTokenRateAttrId(address _resourceToken, uint8 _attrId) public;
 

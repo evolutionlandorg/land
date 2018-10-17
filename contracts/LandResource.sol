@@ -69,6 +69,8 @@ contract LandResource is Ownable{
 
         // TODO: 
 
+        _updateElementResource(_tokenId);
+
         // TODO: update lastUpdateSpeedInSecondsDenominator according to activities and detroy rate.
     }
 
