@@ -70,6 +70,10 @@ contract('Land series contracts', async (accounts) => {
         assert.equal((await landBase.getResourceRate.call(tokenOne.valueOf(), water.address)).toNumber(), 98);
         assert.equal((await landBase.getResourceRate.call(tokenOne.valueOf(), fire.address)).toNumber(), 97);
         assert.equal((await landBase.getResourceRate.call(tokenOne.valueOf(), soil.address)).toNumber(), 96);
+
+        await landBase.setResourceRate(tokenOne.valueOf(), water.address, 88);
+
+        assert.equal((await landBase.getResourceRate.call(tokenOne.valueOf(), water.address)).toNumber(), 88);
     })
 
 })
