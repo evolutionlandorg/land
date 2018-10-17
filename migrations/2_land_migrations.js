@@ -61,6 +61,7 @@ module.exports = async (deployer, network, accounts) => {
     }).then(async () => {
         let tokenLocationProxy = await Proxy.deployed();
         tokenLocationProxy_address = tokenLocationProxy.address;
+        console.log("tokenLocation proxy: ", tokenLocationProxy.address);
         return deployer.deploy(Proxy);
     }).then(async() => {
         let landBaseProxy = await Proxy.deployed();
