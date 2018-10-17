@@ -43,34 +43,34 @@ async function initiateLand(accounts) {
     await settingsRegistry.setAddressProperty(fireId, fire.address);
     await settingsRegistry.setAddressProperty(soilId, soil.address);
 
-    // new LandBase
+    // new contracts with proxy
     let tokenLocation = await TokenLocation.new();
     console.log('tokenLocation address : ', tokenLocation.address);
+    let tokenLocationProxy = await Proxy.new();
+    console.log('tokenLocationProxy address : ', tokenLocationProxy.address);
+
     let landBase = await LandBase.new({gas: 6000000});
     console.log('landBase address : ', landBase.address);
-
-    
     let landBaseProxy = await Proxy.new();
     console.log('landBaseProxy address : ', landBaseProxy.address);
 
-    let tokenLocationId = await settingsId.CONTRACT_TOKEN_LOCATION.call();
-    await settingsRegistry.setAddressProperty(tokenLocationId, tokenLocation.address);
-
-    // new TokenOwnerShip
     let objectOwnership = await ObjectOwnership.new();
     console.log('objectOwnership implementation: ', await objectOwnership.address);
     let objectOwnershipProxy = await Proxy.new();
     console.log('objectOwnershipProxy implementation: ', await objectOwnershipProxy.address);
 
-    let interstellarEncoder = await InterstellarEncoder.new();
-    console.log("interstellarEncoder address: ", interstellarEncoder.address);
-
     // register to settingsRegisty
+    let tokenLocationId = await settingsId.CONTRACT_TOKEN_LOCATION.call();
+    await settingsRegistry.setAddressProperty(tokenLocationId, tokenLocationProxy.address);
+
     let landBaseId = await settingsId.CONTRACT_LAND_BASE.call();
     await settingsRegistry.setAddressProperty(landBaseId, landBaseProxy.address);
 
     let objectOwnershipId = await settingsId.CONTRACT_OBJECT_OWNERSHIP.call();
     await settingsRegistry.setAddressProperty(objectOwnershipId, objectOwnershipProxy.address);
+
+    let interstellarEncoder = await InterstellarEncoder.new();
+    console.log("interstellarEncoder address: ", interstellarEncoder.address);
 
     let interstellarEncoderId = await settingsId.CONTRACT_INTERSTELLAR_ENCODER.call();
     await settingsRegistry.setAddressProperty(interstellarEncoderId, interstellarEncoder.address);
@@ -88,20 +88,22 @@ async function initiateLand(accounts) {
     await tokenLocationAuthority.setWhitelist(landBaseProxy.address, true);
 
     // upgrade
+    await tokenLocationProxy.upgradeTo(tokenLocation.address);
     await landBaseProxy.upgradeTo(landBase.address);
     await objectOwnershipProxy.upgradeTo(objectOwnership.address);
 
+    await TokenLocation.at(tokenLocationProxy.address).initializeContract();
     await ObjectOwnership.at(objectOwnershipProxy.address).initializeContract(settingsRegistry.address);
     await LandBase.at(landBaseProxy.address).initializeContract(settingsRegistry.address);
 
     // set authority
-    await tokenLocation.setAuthority(tokenLocationAuthority.address);
+    await TokenLocation.at(tokenLocationProxy.address).setAuthority(tokenLocationAuthority.address);
     await ObjectOwnership.at(objectOwnershipProxy.address).setAuthority(objectOwnershipAuthority.address);
     console.log('Intialize Successfully!')
 
     return {landBase: LandBase.at(landBaseProxy.address), objectOwnership:
         ObjectOwnership.at(objectOwnershipProxy.address),
-        tokenLocation: tokenLocation,
+        tokenLocation: TokenLocation.at(tokenLocationProxy.address),
         interstellarEncoder: interstellarEncoder,
         gold: gold, wood: wood, water: water, fire: fire, soil: soil}
 
