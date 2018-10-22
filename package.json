@@ -7,7 +7,7 @@
     "test": "test"
   },
   "dependencies": {
-    "@evolutionland/common": "^1.2.2",
+    "@evolutionland/common": "^1.2.4",
     "@evolutionland/upgraeability-using-unstructured-storage": "^0.1.1",
     "babel-polyfill": "^6.26.0",
     "babel-preset-es2015": "^6.18.0",
