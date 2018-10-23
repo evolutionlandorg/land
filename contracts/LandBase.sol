@@ -11,6 +11,7 @@ import "@evolutionland/common/contracts/SettingIds.sol";
 import "@evolutionland/common/contracts/LocationCoder.sol";
 
 contract LandBase is DSAuth, ILandBase, SettingIds {
+    using LocationCoder for *;
 
     uint256 constant internal RESERVED = uint256(1);
     uint256 constant internal SPECIAL = uint256(2);
@@ -95,7 +96,7 @@ contract LandBase is DSAuth, ILandBase, SettingIds {
         _tokenId = IObjectOwnership(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).mintObject(_beneficiary, uint128(lastLandObjectId));
 
         // update locations.
-        uint256 locationId = LocationCoder(registry.addressOf(CONTRACT_TOKEN_LOCATION)).encodeLocationIdHM(_x, _y);
+        uint256 locationId = LocationCoder.encodeLocationIdHM(_x, _y);
         require(locationId2TokenId[locationId] == 0, "Land in this position already been mint.");
         locationId2TokenId[locationId] = _tokenId;
         ITokenLocation(registry.addressOf(CONTRACT_TOKEN_LOCATION)).setTokenLocationHM(_tokenId, _x, _y);
@@ -130,18 +131,18 @@ contract LandBase is DSAuth, ILandBase, SettingIds {
 
     // encode (x,y) to get tokenId
     function getTokenIdByLocation(int _x, int _y) public view returns (uint256) {
-        uint locationId = LocationCoder(registry.addressOf(CONTRACT_TOKEN_LOCATION)).encodeLocationIdHM(_x, _y);
+        uint locationId = LocationCoder.encodeLocationIdHM(_x, _y);
         return locationId2TokenId[locationId];
     }
 
     function exists(int _x, int _y) public view returns (bool) {
-        uint locationId = LocationCoder(registry.addressOf(CONTRACT_TOKEN_LOCATION)).encodeLocationIdHM(_x, _y);
+        uint locationId = LocationCoder.encodeLocationIdHM(_x, _y);
         uint tokenId = locationId2TokenId[locationId];
         return ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).exists(tokenId);
     }
 
     function ownerOfLand(int _x, int _y) public view returns (address) {
-        uint locationId = LocationCoder(registry.addressOf(CONTRACT_TOKEN_LOCATION)).encodeLocationIdHM(_x, _y);
+        uint locationId = LocationCoder.encodeLocationIdHM(_x, _y);
         uint tokenId = locationId2TokenId[locationId];
         return ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(tokenId);
     }
