@@ -10,6 +10,10 @@ const ObjectOwnershipAuthority = artifacts.require('ObjectOwnershipAuthority');
 const TokenLocationAuthority = artifacts.require('TokenLocationAuthority')
 const TokenLocation = artifacts.require('TokenLocation');
 
+const conf = {
+    land_objectClass: 1
+}
+
 let gold_address;
 let wood_address;
 let water_address;
@@ -18,16 +22,12 @@ let soil_address;
 
 let landBaseProxy_address;
 let objectOwnershipProxy_address;
-let tokenLocationProxy_address
+let tokenLocationProxy_address;
 
 module.exports = async (deployer, network, accounts) => {
-    if (network == "development") {
-        return;
-    }
 
     // deployer.deploy(LandBaseAuthority);
-    deployer.deploy(ObjectOwnershipAuthority);
-    deployer.deploy(TokenLocationAuthority);
+
     deployer.deploy(StandardERC223, "GOLD"
     ).then(async() => {
         let gold = await StandardERC223.deployed();
@@ -69,6 +69,8 @@ module.exports = async (deployer, network, accounts) => {
         let objectOwnershipProxy = await Proxy.deployed();
         objectOwnershipProxy_address = objectOwnershipProxy.address;
         console.log("objectOwnership proxy: ", objectOwnershipProxy_address);
+        await deployer.deploy(ObjectOwnershipAuthority, [landBaseProxy_address]);
+        await deployer.deploy(TokenLocationAuthority, [landBaseProxy_address]);
         await deployer.deploy(InterstellarEncoder);
     }).then(async () => {
 
@@ -93,17 +95,13 @@ module.exports = async (deployer, network, accounts) => {
         await settingsRegistry.setAddressProperty(interstellarEncoderId, interstellarEncoder.address);
 
         await interstellarEncoder.registerNewTokenContract(objectOwnershipProxy_address);
-        await interstellarEncoder.registerNewObjectClass(landBaseProxy_address, 1);
+        await interstellarEncoder.registerNewObjectClass(landBaseProxy_address, conf.land_objectClass);
 
 
         let landBase = await LandBase.deployed();
         let objectOwnership = await ObjectOwnership.deployed();
         let tokenLocation = await TokenLocation.deployed();
 
-        let objectOwnershipAuthority = await ObjectOwnershipAuthority.deployed();
-        let tokenLocationAuthority = await TokenLocationAuthority.deployed();
-        await objectOwnershipAuthority.setWhitelist(landBaseProxy_address, true);
-        await tokenLocationAuthority.setWhitelist(landBaseProxy_address, true);
 
         // register in registry
         let objectOwnershipId = await settingIds.CONTRACT_OBJECT_OWNERSHIP.call();
@@ -133,8 +131,8 @@ module.exports = async (deployer, network, accounts) => {
         await ObjectOwnership.at(objectOwnershipProxy_address).initializeContract(settingsRegistry.address);
 
         // set authority
-        await tokenLocationProxy.setAuthority(tokenLocationAuthority.address);
-        await ObjectOwnership.at(objectOwnershipProxy_address).setAuthority(objectOwnershipAuthority.address);
+        await tokenLocationProxy.setAuthority(TokenLocationAuthority.address);
+        await ObjectOwnership.at(objectOwnershipProxy_address).setAuthority(ObjectOwnershipAuthority.address);
         console.log('Intialize Successfully!')
 
     })
