@@ -94,14 +94,10 @@ module.exports = async (deployer, network, accounts) => {
         let interstellarEncoderId = await settingIds.CONTRACT_INTERSTELLAR_ENCODER.call();
         await settingsRegistry.setAddressProperty(interstellarEncoderId, interstellarEncoder.address);
 
-        await interstellarEncoder.registerNewTokenContract(objectOwnershipProxy_address);
-        await interstellarEncoder.registerNewObjectClass(landBaseProxy_address, conf.land_objectClass);
-
 
         let landBase = await LandBase.deployed();
         let objectOwnership = await ObjectOwnership.deployed();
         let tokenLocation = await TokenLocation.deployed();
-
 
         // register in registry
         let objectOwnershipId = await settingIds.CONTRACT_OBJECT_OWNERSHIP.call();
@@ -111,10 +107,12 @@ module.exports = async (deployer, network, accounts) => {
         await settingsRegistry.setAddressProperty(objectOwnershipId, objectOwnershipProxy_address);
         await settingsRegistry.setAddressProperty(tokenLocationId, tokenLocationProxy_address);
 
+        console.log("REGISTER DONE!");
         // upgrade
-        await Proxy.at(landBaseProxy_address).upgradeTo(landBase.address);
-        await Proxy.at(objectOwnershipProxy_address).upgradeTo(objectOwnership.address);
-        await Proxy.at(tokenLocationProxy_address).upgradeTo(tokenLocation.address);
+        await Proxy.at(landBaseProxy_address).upgradeTo(LandBase.address);
+        await Proxy.at(objectOwnershipProxy_address).upgradeTo(ObjectOwnership.address);
+        await Proxy.at(tokenLocationProxy_address).upgradeTo(TokenLocation.address);
+        console.log("UPGRADE DONE!");
 
         // verify proxies' implementations
         let landBase_impl = await Proxy.at(landBaseProxy_address).implementation();
@@ -127,13 +125,20 @@ module.exports = async (deployer, network, accounts) => {
         let tokenLocationProxy = await TokenLocation.at(tokenLocationProxy_address);
         await tokenLocationProxy.initializeContract();
         let landProxy = await LandBase.at(landBaseProxy_address);
-        landProxy.initializeContract(settingsRegistry.address);
-        await ObjectOwnership.at(objectOwnershipProxy_address).initializeContract(settingsRegistry.address);
+        await landProxy.initializeContract(settingsRegistry.address);
+        let objectOwnershipProxy = await ObjectOwnership.at(objectOwnershipProxy_address);
+       await objectOwnershipProxy.initializeContract(settingsRegistry.address);
 
+        console.log("INITIALIZE DONE!");
         // set authority
         await tokenLocationProxy.setAuthority(TokenLocationAuthority.address);
         await ObjectOwnership.at(objectOwnershipProxy_address).setAuthority(ObjectOwnershipAuthority.address);
-        console.log('Intialize Successfully!')
+
+
+        await interstellarEncoder.registerNewTokenContract(objectOwnershipProxy_address);
+        await interstellarEncoder.registerNewObjectClass(landBaseProxy_address, conf.land_objectClass);
+
+        console.log('MIGRATION SUCCESS!');
 
     })
 
