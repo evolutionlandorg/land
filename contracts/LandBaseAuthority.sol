@@ -1,8 +1,6 @@
 pragma solidity ^0.4.24;
 
-import "@evolutionland/common/contracts/interfaces/IAuthority.sol";
-
-contract LandBaseAuthority is IAuthority {
+contract LandBaseAuthority {
 
     constructor(address[] _whitelists) public {
         for (uint i = 0; i < _whitelists.length; i ++) {
