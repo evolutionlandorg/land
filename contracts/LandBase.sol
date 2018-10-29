@@ -3,10 +3,9 @@ pragma solidity ^0.4.24;
 import "./interfaces/ILandBase.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
 import "@evolutionland/common/contracts/interfaces/IObjectOwnership.sol";
-import "@evolutionland/common/contracts/RBACWithAuth.sol";
 import "@evolutionland/common/contracts/interfaces/ITokenLocation.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
-import "@evolutionland/common/contracts/ObjectOwnership.sol";
+import "@evolutionland/common/contracts/DSAuth.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
 import "@evolutionland/common/contracts/LocationCoder.sol";
 
