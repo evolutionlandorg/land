@@ -8,13 +8,14 @@ import "@evolutionland/common/contracts/DSAuth.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
 import "@evolutionland/common/contracts/interfaces/IInterstellarEncoder.sol";
 import "./interfaces/ILandBase.sol";
+import "./interfaces/IMinerObjectActivity.sol";
 import "./LandSettingIds.sol";
 
 /**
  * @title LandResource
  * @dev LandResource is registry that manage the element resources generated on Land, and related resource releasing speed.
  */
-contract LandResource is DSAuth, LandSettingIds {
+contract LandResource is DSAuth, IMinerObjectActivity, LandSettingIds {
     using SafeMath for *;
 
     // For every seconds, the speed will decrease by current speed multiplying (DENOMINATOR_in_seconds - seconds) / DENOMINATOR_in_seconds
@@ -48,15 +49,21 @@ contract LandResource is DSAuth, LandSettingIds {
         uint256 lastUpdateTime;
     }
 
-    struct MinerIndex {
+    struct MinerStatus {
         uint256 landTokenId;
         address resource;
         uint64  indexInResource;
+
+        address user;
+        address owner;
+        uint48  startTime;  // do we need startTime?
+        uint48  endTime;
+        uint256 claimFee;   // default to zero, if user equals owner.
     }
 
     mapping (uint256 => ResourceMintState) public land2ResourceMintState;
 
-    mapping (uint256 => MinerIndex) public miner2Index;
+    mapping (uint256 => MinerStatus) public miner2Index;
 
     /*
      *  Modifiers
@@ -228,5 +235,61 @@ contract LandResource is DSAuth, LandSettingIds {
             IMintableERC20(gold).mint(msg.sender, land2ResourceMintState[_tokenId].mintedBalance[soil]);
             land2ResourceMintState[_tokenId].mintedBalance[soil] = 0;
         }
+    }
+
+    function isObjectInActivity(uint256 _tokenId) public view returns (bool) {
+        if (miner2Index[_tokenId].user == address(0)) {
+            return false;
+        }
+        
+        return miner2Index[_tokenId].startTime <= now && now <= miner2Index[_tokenId].endTime;
+    }
+
+    function joinActivity(
+        uint256 _tokenId, uint256 _landTokenId, address _resource, address _user, address _owner, uint256 _startTime, uint256 _endTime, uint256 _claimFee
+    ) public auth {
+        ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).transferFrom(msg.sender, address(this), _tokenId);
+
+        uint256 _index = land2ResourceMintState[_landTokenId].miners[_resource].length;
+        // TODO require the permission from land owner;
+        land2ResourceMintState[_landTokenId].miners[_resource].push(_tokenId);
+
+        miner2Index[_tokenId] = MinerStatus({
+            landTokenId: _landTokenId,
+            resource: _resource,
+            indexInResource: uint64(_index),
+            user : _user,
+            owner : _owner,
+            startTime : uint48(_startTime),
+            endTime : uint48(_endTime),
+            claimFee : _claimFee
+        });
+    }
+
+    function stopActivityAndClaimObject(uint256 _tokenId) public {
+        require(miner2Index[_tokenId].user != address(0), "Object does not exist.");
+
+        // require(msg.sender == miner2Index[_tokenId].user || msg.sender == miner2Index[_tokenId].owner);
+
+        // when in activity, only user can stop
+        if(isObjectInActivity(_tokenId)) {
+            require(miner2Index[_tokenId].user == msg.sender);
+        }
+
+        // remove the miner from land2ResourceMintState;
+        uint64 _minerIndex = miner2Index[_tokenId].indexInResource;
+        address _resouce = miner2Index[_tokenId].resource;
+        uint64 _lastMinerIndex = uint64(land2ResourceMintState[miner2Index[_tokenId].landTokenId].miners[_resouce].length - 1);
+        uint256 _lastMiner = land2ResourceMintState[miner2Index[_tokenId].landTokenId].miners[_resouce][_lastMinerIndex];
+
+        land2ResourceMintState[miner2Index[_tokenId].landTokenId].miners[_resouce][_minerIndex] = _lastMiner;
+        land2ResourceMintState[miner2Index[_tokenId].landTokenId].miners[_resouce][_lastMinerIndex] = 0;
+
+        land2ResourceMintState[miner2Index[_tokenId].landTokenId].miners[_resouce].length --;
+        miner2Index[_lastMiner].indexInResource = _minerIndex;
+
+        ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).transferFrom(address(this), miner2Index[_tokenId].owner, _tokenId);
+
+        delete miner2Index[_tokenId];
     }
 }
