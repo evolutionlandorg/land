@@ -1,34 +1,37 @@
 pragma solidity ^0.4.23;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "@evolutionland/common/contracts/ObjectOwnership.sol";
-import "./LandBase.sol";
+import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
+import "@evolutionland/common/contracts/interfaces/IMintableERC20.sol";
+import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
+import "@evolutionland/common/contracts/DSAuth.sol";
+import "@evolutionland/common/contracts/SettingIds.sol";
+import "@evolutionland/common/contracts/interfaces/IInterstellarEncoder.sol";
+import "./interfaces/ILandBase.sol";
+import "./LandSettingIds.sol";
 
 /**
  * @title LandResource
  * @dev LandResource is registry that manage the element resources generated on Land, and related resource releasing speed.
  */
-contract LandResource is Ownable{
+contract LandResource is DSAuth, LandSettingIds {
     using SafeMath for *;
 
-    LandBase public landBase;
-    ObjectOwnership public objectOwnership;
+    // For every seconds, the speed will decrease by current speed multiplying (DENOMINATOR_in_seconds - seconds) / DENOMINATOR_in_seconds
+    // resourc will decrease 1/10000 every day.
+    uint256 public constant DENOMINATOR = 10000;
 
-    // ERC20 resource tokens
-    address public gold;
-    address public wood;
-    address public hho;
-    address public fire;
-    address public sioo;
+    uint256 public constant TOTAL_SECONDS = DENOMINATOR * (1 days);
+
+    bool private singletonLock = false;
+
+    ISettingsRegistry public registry;
 
     uint256 resourceReleaseStartTime;
     
-    uint256 public aattenPerDay = 1; // TODO: move to global settings contract.
-    uint256 public recoveAttenPerDay = 20;
-    uint256 public denominator = 10000;
-
-    uint256 denominator_in_seconds = denominator * (1 days);
+    // TODO: move to global settings contract.
+    uint256 public aattenPerDay = 1;
+    uint256 public recoverAttenPerDay = 20;
 
     // Struct for recording resouces on land which have already been pinged.
     // 金, Evolution Land Gold
@@ -36,134 +39,194 @@ contract LandResource is Ownable{
     // 水, Evolution Land Water
     // 火, Evolution Land fire
     // 土, Evolution Land Silicon
-    struct UpdatedElementResource {
-        mapping(address=>uint256) updatedMintableBalances;
-        uint256 lastUpdateSpeedInSecondsDenominator;
-        uint256 lastDestoryAttenInSecondsDenominator;
+    struct ResourceMintState {
+        mapping(address=>uint256) mintedBalance;
+        mapping(address=>uint256[]) miners;
+        uint256 lastUpdateSpeedInSeconds;
+        uint256 lastDestoryAttenInSeconds;
         uint256 industryIndex;
         uint256 lastUpdateTime;
     }
 
-    mapping (uint256 => UpdatedElementResource) public resourceBalance;
-
-    constructor(address _landBase, address _objectOwnership, uint256
-         _resourceReleaseStartTime, address _gold, address _wood, address _hho, address _fire, address _sioo) public {
-        landBase = LandBase(_landBase);
-        objectOwnership = ObjectOwnership(_objectOwnership);
-        resourceReleaseStartTime = _resourceReleaseStartTime;
-
-        gold = _gold;
-        wood = _wood;
-        hho = _hho;
-        fire = _fire;
-        sioo = _sioo;
+    struct MinerIndex {
+        uint256 landTokenId;
+        address resource;
+        uint64  indexInResource;
     }
 
-    /**
-     * @dev Ping by outside to notify the element resources should be updated
-     * @param _tokenId the token id of the land
-     * @param _data the data sent by outside to update the balance and speed of element resources (TODO: To be implemented)
+    mapping (uint256 => ResourceMintState) public land2ResourceMintState;
+
+    mapping (uint256 => MinerIndex) public miner2Index;
+
+    /*
+     *  Modifiers
      */
-    function ping(uint256 _tokenId, bytes _data) public {
-        require(msg.sender == address(landBase));
-
-        // TODO: 
-
-        _updateElementResource(_tokenId);
-
-        // TODO: update lastUpdateSpeedInSecondsDenominator according to activities and detroy rate.
+    modifier singletonLockCall() {
+        require(!singletonLock, "Only can call once");
+        _;
+        singletonLock = true;
     }
 
-    function _getSpeedInSecondsDenominatorForLand(uint256 _tokenId, uint256 _time) internal view returns (uint256 currentSpeed) {
-        require(_time > resourceReleaseStartTime);
-        require(_time > resourceBalance[_tokenId].lastUpdateTime);
+    function initializeContract(address _registry, uint256 _resourceReleaseStartTime) public singletonLockCall {
+        // Ownable constructor
+        owner = msg.sender;
+        emit LogSetOwner(msg.sender);
 
-        if (denominator_in_seconds < _time - resourceReleaseStartTime)
+        registry = ISettingsRegistry(_registry);
+
+        resourceReleaseStartTime = _resourceReleaseStartTime;
+    }
+
+    function _getReleaseSpeedInSeconds(uint256 _tokenId, uint256 _time) internal view returns (uint256 currentSpeed) {
+        require(_time > resourceReleaseStartTime, "Should after release time");
+        require(_time > land2ResourceMintState[_tokenId].lastUpdateTime, "Should after release last update time");
+
+        if (TOTAL_SECONDS < _time - resourceReleaseStartTime)
         {
             return 0;
         }
 
-        uint256 v_max_d = denominator_in_seconds.sub( _time - resourceReleaseStartTime);
+        uint256 _availableSpeedInSeconds = TOTAL_SECONDS.sub(_time - resourceReleaseStartTime);
 
-        uint256 time_between = _time - resourceBalance[_tokenId].lastUpdateTime;
+        uint256 _timeBetween = _time - land2ResourceMintState[_tokenId].lastUpdateTime;
 
         // the recover speed is 20/10000, 20 times.
-        uint256 v_next_d = resourceBalance[_tokenId].lastUpdateSpeedInSecondsDenominator + time_between * recoveAttenPerDay;
+        uint256 _nextSpeedInSeconds = land2ResourceMintState[_tokenId].lastUpdateSpeedInSeconds + _timeBetween * recoverAttenPerDay;
 
-        if (v_next_d < time_between * resourceBalance[_tokenId].lastDestoryAttenInSecondsDenominator)
+        uint256 _destroyedSpeedInSeconds = _timeBetween * land2ResourceMintState[_tokenId].lastDestoryAttenInSeconds;
+
+        if (_nextSpeedInSeconds < _destroyedSpeedInSeconds)
         {
-            v_next_d = 0;
+            _nextSpeedInSeconds = 0;
         } else {
-            v_next_d = v_next_d - time_between * resourceBalance[_tokenId].lastDestoryAttenInSecondsDenominator;
+            _nextSpeedInSeconds = _nextSpeedInSeconds - _destroyedSpeedInSeconds;
         }
 
-        if (v_next_d > v_max_d){
-            v_next_d = v_max_d;
+        if (_nextSpeedInSeconds > _availableSpeedInSeconds) {
+            _nextSpeedInSeconds = _availableSpeedInSeconds;
         }
 
-        return v_next_d;
+        return _nextSpeedInSeconds;
     }
 
-    function getCurrentSpeedForLand(uint256 _tokenId, address _resourceToken) public view returns (uint256 currentSpeed) {
-
-        return landBase.getResourceRate(_tokenId, _resourceToken).mul(_getSpeedInSecondsDenominatorForLand(_tokenId, now)).div(denominator_in_seconds);
+    function getReleaseSpeed(uint256 _tokenId, address _resourceToken, uint256 _time) public view returns (uint256 currentSpeed) {
+        return ILandBase(registry.addressOf(CONTRACT_LAND_BASE))
+            .getResourceRate(_tokenId, _resourceToken).mul(_getReleaseSpeedInSeconds(_tokenId, _time))
+            .div(TOTAL_SECONDS);
     }
 
     /**
      * @dev Get and Query the amount of resources available for use on specific land.
      * @param _tokenId The token id of specific land.
     */
-    function getCurrentBalanceOnLandForResource(uint256 _tokenId, address _resourceToken) public view 
-    returns (uint256 currentBalance) {
-        // first, add the updated balance
-        currentBalance = resourceBalance[_tokenId].updatedMintableBalances[_resourceToken];
-
-        if (_resourceToken != gold && _resourceToken != wood && _resourceToken != hho && _resourceToken != fire && _resourceToken != sioo)
+    function _getMintableBalance(uint256 _tokenId, address _resourceToken) public view returns (uint256 _mintableBalance) {
+        // the longest seconds to zero speed.
+        uint256 currentTime = now;
+        if (land2ResourceMintState[_tokenId].lastUpdateTime >= (resourceReleaseStartTime + TOTAL_SECONDS)) {
+            return 0;
+        } else if (now > (resourceReleaseStartTime + TOTAL_SECONDS))
         {
-            return currentBalance;
+            currentTime = (resourceReleaseStartTime + TOTAL_SECONDS);
         }
-        // second, add the balance which have not been updated;
 
-        uint256 v_init = landBase.getResourceRate(_tokenId, _resourceToken);
+        require(currentTime >= land2ResourceMintState[_tokenId].lastUpdateTime);
+
+        uint256 speed_in_current_period = getReleaseSpeed(
+            _tokenId, _resourceToken, (currentTime + land2ResourceMintState[_tokenId].lastUpdateTime) / 2);
+
+        _mintableBalance = speed_in_current_period.mul(currentTime - land2ResourceMintState[_tokenId].lastUpdateTime).mul(1 ether).div(1 days);
+    }
+
+    function _getMaxMintBalance(uint256 _tokenId, address _resourceToken) internal view returns (uint256) {
+        // TODO: Every miner add one speed for now for every day
+        uint256 _mintSpeed = land2ResourceMintState[_tokenId].miners[_resourceToken].length;
 
         // the longest seconds to zero speed.
         uint256 currentTime = now;
-        if (resourceBalance[_tokenId].lastUpdateTime >= (resourceReleaseStartTime + denominator_in_seconds)) {
-            return currentBalance;
-        } else if (now > (resourceReleaseStartTime + denominator_in_seconds))
+        if (land2ResourceMintState[_tokenId].lastUpdateTime >= (resourceReleaseStartTime + TOTAL_SECONDS)) {
+            return 0;
+        } else if (now > (resourceReleaseStartTime + TOTAL_SECONDS))
         {
-            currentTime = (resourceReleaseStartTime + denominator_in_seconds);
+            currentTime = (resourceReleaseStartTime + TOTAL_SECONDS);
         }
 
-        require(currentTime >= resourceBalance[_tokenId].lastUpdateTime);
-
-        uint256 mid_now_update_to_start = (currentTime + resourceBalance[_tokenId].lastUpdateTime)/2 - resourceReleaseStartTime;
-
-        uint256 speed_in_current_period = v_init.mul(_getSpeedInSecondsDenominatorForLand(_tokenId, mid_now_update_to_start)).div(denominator_in_seconds);
-        
-
-        // FIXME: TODO: is v_init in seconds?
-        currentBalance = currentBalance + speed_in_current_period.mul(currentTime - resourceBalance[_tokenId].lastUpdateTime);
+        return _mintSpeed.mul(currentTime - land2ResourceMintState[_tokenId].lastUpdateTime).mul(1 ether).div(1 days);
     }
 
-    // TODO: the owner of the land can withdraw resources to his own wallet.
-
-
-    // TODO: add airdrop functin for airdrop tokens to the land.
-    // implement by using tokenFallback.
-
-    function changelandBase(address _newLandGenesisData) public onlyOwner {
-        landBase = LandBase(_newLandGenesisData);
+    function mint(uint256 _tokenId) public {
+        _mintAllResource(
+            _tokenId,
+            registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN),
+            registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN),
+            registry.addressOf(CONTRACT_WATER_ERC20_TOKEN),
+            registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN),
+            registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN)
+        );
     }
 
-    function _updateElementResource(uint256 _tokenId) internal {
-        resourceBalance[_tokenId].updatedMintableBalances[gold] = getCurrentBalanceOnLandForResource(_tokenId, gold);
-        resourceBalance[_tokenId].updatedMintableBalances[wood] = getCurrentBalanceOnLandForResource(_tokenId, wood);
-        resourceBalance[_tokenId].updatedMintableBalances[hho] = getCurrentBalanceOnLandForResource(_tokenId, hho);
-        resourceBalance[_tokenId].updatedMintableBalances[fire] = getCurrentBalanceOnLandForResource(_tokenId, fire);
-        resourceBalance[_tokenId].updatedMintableBalances[sioo] = getCurrentBalanceOnLandForResource(_tokenId, sioo);
-        resourceBalance[_tokenId].lastUpdateTime = now;
-        resourceBalance[_tokenId].lastUpdateSpeedInSecondsDenominator = _getSpeedInSecondsDenominatorForLand(_tokenId, now);
+    function _mintAllResource(uint256 _tokenId, address _gold, address _wood, address _water, address _fire, address _soil) internal {
+        require(IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectClass(_tokenId) == 1, "Token must be land.");
+
+        if (land2ResourceMintState[_tokenId].lastUpdateTime == 0) {
+            land2ResourceMintState[_tokenId].lastUpdateTime = resourceReleaseStartTime;
+            land2ResourceMintState[_tokenId].lastUpdateSpeedInSeconds = TOTAL_SECONDS;
+        }
+
+        _mintResource(_tokenId, _gold);
+        _mintResource(_tokenId, _wood);
+        _mintResource(_tokenId, _water);
+        _mintResource(_tokenId, _fire);
+        _mintResource(_tokenId, _soil);
+
+        land2ResourceMintState[_tokenId].lastUpdateTime = now;
+        land2ResourceMintState[_tokenId].lastUpdateSpeedInSeconds = _getReleaseSpeedInSeconds(_tokenId, now);
     }
 
+    function _mintResource(uint256 _tokenId, address _resourceToken) internal {
+        uint256 _mintedBalance = _getMaxMintBalance(_tokenId, _resourceToken);
+        uint256 _mintableBalance = _getMintableBalance(_tokenId, _resourceToken);
+
+        if (_mintedBalance > _mintableBalance) {
+            _mintedBalance = _mintableBalance;
+        }
+
+        land2ResourceMintState[_tokenId].mintedBalance[_resourceToken] = _mintedBalance;
+    }
+
+    function claimAllResource(uint256 _tokenId) public {
+        require(msg.sender == ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(_tokenId), "Must be the owner of the land");
+
+        address gold = registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN);
+        address wood = registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN);
+        address water = registry.addressOf(CONTRACT_WATER_ERC20_TOKEN);
+        address fire = registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN);
+        address soil = registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN);
+
+        _mintAllResource(_tokenId, gold, wood, water, fire, soil);
+
+        if (land2ResourceMintState[_tokenId].mintedBalance[gold] > 0) {
+            IMintableERC20(gold).mint(msg.sender, land2ResourceMintState[_tokenId].mintedBalance[gold]);
+            land2ResourceMintState[_tokenId].mintedBalance[gold] = 0;
+        }
+
+        if (land2ResourceMintState[_tokenId].mintedBalance[wood] > 0) {
+            IMintableERC20(gold).mint(msg.sender, land2ResourceMintState[_tokenId].mintedBalance[wood]);
+            land2ResourceMintState[_tokenId].mintedBalance[wood] = 0;
+        }
+
+        if (land2ResourceMintState[_tokenId].mintedBalance[water] > 0) {
+            IMintableERC20(gold).mint(msg.sender, land2ResourceMintState[_tokenId].mintedBalance[water]);
+            land2ResourceMintState[_tokenId].mintedBalance[water] = 0;
+        }
+
+        if (land2ResourceMintState[_tokenId].mintedBalance[fire] > 0) {
+            IMintableERC20(gold).mint(msg.sender, land2ResourceMintState[_tokenId].mintedBalance[fire]);
+            land2ResourceMintState[_tokenId].mintedBalance[fire] = 0;
+        }
+
+        if (land2ResourceMintState[_tokenId].mintedBalance[soil] > 0) {
+            IMintableERC20(gold).mint(msg.sender, land2ResourceMintState[_tokenId].mintedBalance[soil]);
+            land2ResourceMintState[_tokenId].mintedBalance[soil] = 0;
+        }
+    }
 }
