@@ -261,6 +261,8 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
         // only user can stop mining directly.
         require(
             ITokenActivity(registry.addressOf(CONTRACT_TOKEN_ACTIVITY)).getTokenUser(_tokenId) == msg.sender, "Only token owner can stop the mining.");
+
+        ITokenActivity(registry.addressOf(CONTRACT_TOKEN_ACTIVITY)).stopTokenActivityFromContract(_tokenId);
         _stopMining(_tokenId);
     }
 
