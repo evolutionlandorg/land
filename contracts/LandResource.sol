@@ -7,15 +7,16 @@ import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
 import "@evolutionland/common/contracts/interfaces/IInterstellarEncoder.sol";
+import "@evolutionland/common/contracts/interfaces/ITokenActivity.sol";
+import "@evolutionland/common/contracts/interfaces/IActivity.sol";
 import "./interfaces/ILandBase.sol";
-import "./interfaces/IMinerObjectActivity.sol";
 import "./LandSettingIds.sol";
 
 /**
  * @title LandResource
  * @dev LandResource is registry that manage the element resources generated on Land, and related resource releasing speed.
  */
-contract LandResource is DSAuth, IMinerObjectActivity, LandSettingIds {
+contract LandResource is DSAuth, IActivity, LandSettingIds {
     using SafeMath for *;
 
     // For every seconds, the speed will decrease by current speed multiplying (DENOMINATOR_in_seconds - seconds) / DENOMINATOR_in_seconds
@@ -53,12 +54,6 @@ contract LandResource is DSAuth, IMinerObjectActivity, LandSettingIds {
         uint256 landTokenId;
         address resource;
         uint64  indexInResource;
-
-        address user;
-        address owner;
-        uint48  startTime;  // do we need startTime?
-        uint48  endTime;
-        uint256 claimFee;   // default to zero, if user equals owner.
     }
 
     mapping (uint256 => ResourceMintState) public land2ResourceMintState;
@@ -237,18 +232,10 @@ contract LandResource is DSAuth, IMinerObjectActivity, LandSettingIds {
         }
     }
 
-    function isObjectInActivity(uint256 _tokenId) public view returns (bool) {
-        if (miner2Index[_tokenId].user == address(0)) {
-            return false;
-        }
-        
-        return miner2Index[_tokenId].startTime <= now && now <= miner2Index[_tokenId].endTime;
-    }
+    function startMining(uint256 _tokenId, uint256 _landTokenId, address _resource) public {
+        ITokenActivity(registry.addressOf(CONTRACT_TOKEN_ACTIVITY)).startTokenActivityFromContract(_tokenId, msg.sender, msg.sender, now, MAX_UINT48_TIME, 0);
 
-    function joinActivity(
-        uint256 _tokenId, uint256 _landTokenId, address _resource, address _user, address _owner, uint256 _startTime, uint256 _endTime, uint256 _claimFee
-    ) public auth {
-        ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).transferFrom(msg.sender, address(this), _tokenId);
+        ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).transferFrom(msg.sender, registry.addressOf(CONTRACT_TOKEN_ACTIVITY), _tokenId);
 
         uint256 _index = land2ResourceMintState[_landTokenId].miners[_resource].length;
         // TODO require the permission from land owner;
@@ -257,25 +244,27 @@ contract LandResource is DSAuth, IMinerObjectActivity, LandSettingIds {
         miner2Index[_tokenId] = MinerStatus({
             landTokenId: _landTokenId,
             resource: _resource,
-            indexInResource: uint64(_index),
-            user : _user,
-            owner : _owner,
-            startTime : uint48(_startTime),
-            endTime : uint48(_endTime),
-            claimFee : _claimFee
+            indexInResource: uint64(_index)
         });
     }
 
-    function stopActivityAndClaimObject(uint256 _tokenId) public {
-        require(miner2Index[_tokenId].user != address(0), "Object does not exist.");
+    function isActivity() public returns (bool) {
+        return true;
+    }
 
-        // require(msg.sender == miner2Index[_tokenId].user || msg.sender == miner2Index[_tokenId].owner);
+    // Only trigger from Token Activity.
+    function activityStopped(uint256 _tokenId) public auth {
+        _stopMining(_tokenId);
+    }
 
-        // when in activity, only user can stop
-        if(isObjectInActivity(_tokenId)) {
-            require(miner2Index[_tokenId].user == msg.sender);
-        }
+    function stopMining(uint256 _tokenId) public {
+        // only user can stop mining directly.
+        require(
+            ITokenActivity(registry.addressOf(CONTRACT_TOKEN_ACTIVITY)).getTokenUser(_tokenId) == msg.sender, "Only token owner can stop the mining.");
+        _stopMining(_tokenId);
+    }
 
+    function _stopMining(uint256 _tokenId) public {
         // remove the miner from land2ResourceMintState;
         uint64 _minerIndex = miner2Index[_tokenId].indexInResource;
         address _resouce = miner2Index[_tokenId].resource;
@@ -287,8 +276,6 @@ contract LandResource is DSAuth, IMinerObjectActivity, LandSettingIds {
 
         land2ResourceMintState[miner2Index[_tokenId].landTokenId].miners[_resouce].length --;
         miner2Index[_lastMiner].indexInResource = _minerIndex;
-
-        ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).transferFrom(address(this), miner2Index[_tokenId].owner, _tokenId);
 
         delete miner2Index[_tokenId];
     }
