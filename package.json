@@ -1,13 +1,13 @@
 {
   "name": "@evolutionland/land",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Land Contracts for Evolution Land",
   "main": "truffle-config.js",
   "directories": {
     "test": "test"
   },
   "dependencies": {
-    "@evolutionland/common": "^1.4.4",
+    "@evolutionland/common": "^1.4.6",
     "@evolutionland/upgraeability-using-unstructured-storage": "^0.1.1",
     "babel-polyfill": "^6.26.0",
     "babel-preset-es2015": "^6.18.0",

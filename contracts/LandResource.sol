@@ -7,7 +7,7 @@ import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
 import "@evolutionland/common/contracts/SettingIds.sol";
 import "@evolutionland/common/contracts/interfaces/IInterstellarEncoder.sol";
-import "@evolutionland/common/contracts/interfaces/ITokenActivity.sol";
+import "@evolutionland/common/contracts/interfaces/ITokenUse.sol";
 import "@evolutionland/common/contracts/interfaces/IActivity.sol";
 import "./interfaces/ILandBase.sol";
 import "./LandSettingIds.sol";
@@ -233,9 +233,9 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
     }
 
     function startMining(uint256 _tokenId, uint256 _landTokenId, address _resource) public {
-        ITokenActivity(registry.addressOf(CONTRACT_TOKEN_ACTIVITY)).startTokenActivityFromContract(_tokenId, msg.sender, msg.sender, now, MAX_UINT48_TIME, 0);
+        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).startTokenUseFromActivity(_tokenId, msg.sender, msg.sender, now, MAX_UINT48_TIME, 0);
 
-        ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).transferFrom(msg.sender, registry.addressOf(CONTRACT_TOKEN_ACTIVITY), _tokenId);
+        ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).transferFrom(msg.sender, registry.addressOf(CONTRACT_TOKEN_USE), _tokenId);
 
         uint256 _index = land2ResourceMintState[_landTokenId].miners[_resource].length;
         // TODO require the permission from land owner;
@@ -253,16 +253,16 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
     }
 
     // Only trigger from Token Activity.
-    function activityStopped(uint256 _tokenId) public auth {
+    function tokenUseStopped(uint256 _tokenId) public auth {
         _stopMining(_tokenId);
     }
 
     function stopMining(uint256 _tokenId) public {
         // only user can stop mining directly.
         require(
-            ITokenActivity(registry.addressOf(CONTRACT_TOKEN_ACTIVITY)).getTokenUser(_tokenId) == msg.sender, "Only token owner can stop the mining.");
+            ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).getTokenUser(_tokenId) == msg.sender, "Only token owner can stop the mining.");
 
-        ITokenActivity(registry.addressOf(CONTRACT_TOKEN_ACTIVITY)).stopTokenActivityFromContract(_tokenId);
+        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).stopTokenUseFromActivity(_tokenId);
         _stopMining(_tokenId);
     }
 
