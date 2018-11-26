@@ -11,6 +11,6 @@ contract LandSettingIds is SettingIds {
     uint256 public constant FIRE_MAGNITUDE = 1;
     uint256 public constant SOIL_MAGNITUDE = 1;
 
-    bytes32 public constant CONTRACT_APOSTLE = "CONTRACT_APOSTLE";
+    bytes32 public constant CONTRACT_MINER = "CONTRACT_MINER";
 
 }

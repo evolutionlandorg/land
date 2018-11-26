@@ -11,7 +11,7 @@ import "@evolutionland/common/contracts/interfaces/ITokenUse.sol";
 import "@evolutionland/common/contracts/interfaces/IActivity.sol";
 import "./interfaces/ILandBase.sol";
 import "./LandSettingIds.sol";
-import "./interfaces/IApostle.sol";
+import "./interfaces/IMiner.sol";
 
 /**
  * @title LandResource
@@ -259,7 +259,7 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
 
             land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
 
-            uint256 strength = IApostle(registry.addressOf(CONTRACT_APOSTLE)).getStrength(_tokenId);
+            uint256 strength = IMiner(registry.addressOf(CONTRACT_MINER)).getStrength(_tokenId);
             land2ResourceMineState[_landTokenId].totalMinerStrength[_resource] += strength;
 
             miner2Index[_tokenId] = MinerStatus({
@@ -274,32 +274,11 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
     }
 
     function batchStartMining(uint256[] _tokenIds, uint256[] _landTokenIds, address[] _resources) public {
-        ITokenUse tokenUse = ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE));
-        ERC721 nft = ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP));
-
         require(_tokenIds.length == _landTokenIds.length && _landTokenIds.length == _resources.length, "input error");
-        // TODO: update common-contract's version
-        tokenUse.batchStartTokenUseFromActivity(_tokenIds, msg.sender, msg.sender, now, MAX_UINT48_TIME, 0);
         uint length = _tokenIds.length;
-
+        
         for(uint i = 0; i < length; i++) {
-            // make sure that _tokenId won't be used repeatedly
-            if(miner2Index[_tokenIds[i]].landTokenId == 0) {
-                land2ResourceMineState[_landTokenIds[i]].miners[_resources[i]].push(_tokenIds[i]);
-                uint256 _index = land2ResourceMineState[_landTokenIds[i]].miners[_resources[i]].length;
-                uint256 strength = IApostle(registry.addressOf(CONTRACT_APOSTLE)).getStrength(_tokenIds[i]);
-                land2ResourceMineState[_landTokenIds[i]].totalMinerStrength[_resources[i]] += strength;
-
-                miner2Index[_tokenIds[i]] = MinerStatus({
-                    landTokenId: _landTokenIds[i],
-                    resource: _resources[i],
-                    indexInResource: uint64(_index)
-                    });
-
-                // update status!
-                mine(_landTokenIds[i]);
-            }
-
+            startMining(_tokenIds[i], _landTokenIds[i], _resources[i]);
         }
 
     }
@@ -335,7 +314,7 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
         land2ResourceMineState[miner2Index[_tokenId].landTokenId].miners[resource].length--;
         miner2Index[lastMiner].indexInResource = minerIndex;
 
-        uint256 strength = IApostle(registry.addressOf(CONTRACT_APOSTLE)).getStrength(_tokenId);
+        uint256 strength = IMiner(registry.addressOf(CONTRACT_MINER)).getStrength(_tokenId);
         land2ResourceMineState[miner2Index[_tokenId].landTokenId].totalMinerStrength[resource] -= strength;
 
         delete miner2Index[_tokenId];
