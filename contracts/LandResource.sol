@@ -11,6 +11,7 @@ import "@evolutionland/common/contracts/interfaces/ITokenUse.sol";
 import "@evolutionland/common/contracts/interfaces/IActivity.sol";
 import "./interfaces/ILandBase.sol";
 import "./LandSettingIds.sol";
+import "./interfaces/IApostle.sol";
 
 /**
  * @title LandResource
@@ -20,7 +21,7 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
     using SafeMath for *;
 
     // For every seconds, the speed will decrease by current speed multiplying (DENOMINATOR_in_seconds - seconds) / DENOMINATOR_in_seconds
-    // resourc will decrease 1/10000 every day.
+    // resource will decrease 1/10000 every day.
     uint256 public constant DENOMINATOR = 10000;
 
     uint256 public constant TOTAL_SECONDS = DENOMINATOR * (1 days);
@@ -32,7 +33,7 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
     uint256 resourceReleaseStartTime;
     
     // TODO: move to global settings contract.
-    uint256 public aattenPerDay = 1;
+    uint256 public attenPerDay = 1;
     uint256 public recoverAttenPerDay = 20;
 
     // Struct for recording resouces on land which have already been pinged.
@@ -41,9 +42,10 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
     // 水, Evolution Land Water
     // 火, Evolution Land fire
     // 土, Evolution Land Silicon
-    struct ResourceMintState {
+    struct ResourceMineState {
         mapping(address=>uint256) mintedBalance;
         mapping(address=>uint256[]) miners;
+        mapping(address=>uint256) totalMinerStrength;
         uint256 lastUpdateSpeedInSeconds;
         uint256 lastDestoryAttenInSeconds;
         uint256 industryIndex;
@@ -56,7 +58,7 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
         uint64  indexInResource;
     }
 
-    mapping (uint256 => ResourceMintState) public land2ResourceMintState;
+    mapping (uint256 => ResourceMineState) public land2ResourceMineState;
 
     mapping (uint256 => MinerStatus) public miner2Index;
 
@@ -79,36 +81,42 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
         resourceReleaseStartTime = _resourceReleaseStartTime;
     }
 
+    // get amount of speed uint at this moment
     function _getReleaseSpeedInSeconds(uint256 _tokenId, uint256 _time) internal view returns (uint256 currentSpeed) {
         require(_time > resourceReleaseStartTime, "Should after release time");
-        require(_time > land2ResourceMintState[_tokenId].lastUpdateTime, "Should after release last update time");
+        require(_time > land2ResourceMineState[_tokenId].lastUpdateTime, "Should after release last update time");
 
+        // after 10000 days from start
+        // the resource release speed decreases to 0
         if (TOTAL_SECONDS < _time - resourceReleaseStartTime)
         {
             return 0;
         }
 
-        uint256 _availableSpeedInSeconds = TOTAL_SECONDS.sub(_time - resourceReleaseStartTime);
-
-        uint256 _timeBetween = _time - land2ResourceMintState[_tokenId].lastUpdateTime;
+        // max amount of speed unit of _tokenId for now
+        // suppose that speed_uint = 1 in this function
+        uint256 availableSpeedInSeconds = TOTAL_SECONDS.sub(_time - resourceReleaseStartTime);
+        // time from last update
+        uint256 timeBetween = _time - land2ResourceMineState[_tokenId].lastUpdateTime;
 
         // the recover speed is 20/10000, 20 times.
-        uint256 _nextSpeedInSeconds = land2ResourceMintState[_tokenId].lastUpdateSpeedInSeconds + _timeBetween * recoverAttenPerDay;
+        // recoveryRate overall from lasUpdateTime til now + amount of speed uint at lastUpdateTime
+        uint256 nextSpeedInSeconds = land2ResourceMineState[_tokenId].lastUpdateSpeedInSeconds + timeBetween * recoverAttenPerDay;
+        // destroyRate overall from lasUpdateTime til now amount of speed uint at lastUpdateTime
+        uint256 destroyedSpeedInSeconds = timeBetween * land2ResourceMineState[_tokenId].lastDestoryAttenInSeconds;
 
-        uint256 _destroyedSpeedInSeconds = _timeBetween * land2ResourceMintState[_tokenId].lastDestoryAttenInSeconds;
-
-        if (_nextSpeedInSeconds < _destroyedSpeedInSeconds)
+        if (nextSpeedInSeconds < destroyedSpeedInSeconds)
         {
-            _nextSpeedInSeconds = 0;
+            nextSpeedInSeconds = 0;
         } else {
-            _nextSpeedInSeconds = _nextSpeedInSeconds - _destroyedSpeedInSeconds;
+            nextSpeedInSeconds = nextSpeedInSeconds - destroyedSpeedInSeconds;
         }
 
-        if (_nextSpeedInSeconds > _availableSpeedInSeconds) {
-            _nextSpeedInSeconds = _availableSpeedInSeconds;
+        if (nextSpeedInSeconds > availableSpeedInSeconds) {
+            nextSpeedInSeconds = availableSpeedInSeconds;
         }
 
-        return _nextSpeedInSeconds;
+        return nextSpeedInSeconds;
     }
 
     function getReleaseSpeed(uint256 _tokenId, address _resourceToken, uint256 _time) public view returns (uint256 currentSpeed) {
@@ -118,45 +126,46 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
     }
 
     /**
-     * @dev Get and Query the amount of resources available for use on specific land.
+     * @dev Get and Query the amount of resources available from lastUpdateTime to now for use on specific land.
      * @param _tokenId The token id of specific land.
     */
-    function _getMintableBalance(uint256 _tokenId, address _resourceToken) public view returns (uint256 _mintableBalance) {
+    function _getMinableBalance(uint256 _tokenId, address _resourceToken) public view returns (uint256 minableBalance) {
         // the longest seconds to zero speed.
         uint256 currentTime = now;
-        if (land2ResourceMintState[_tokenId].lastUpdateTime >= (resourceReleaseStartTime + TOTAL_SECONDS)) {
+        if (land2ResourceMineState[_tokenId].lastUpdateTime >= (resourceReleaseStartTime + TOTAL_SECONDS)) {
             return 0;
         } else if (now > (resourceReleaseStartTime + TOTAL_SECONDS))
         {
             currentTime = (resourceReleaseStartTime + TOTAL_SECONDS);
         }
 
-        require(currentTime >= land2ResourceMintState[_tokenId].lastUpdateTime);
+        require(currentTime >= land2ResourceMineState[_tokenId].lastUpdateTime);
 
         uint256 speed_in_current_period = getReleaseSpeed(
-            _tokenId, _resourceToken, (currentTime + land2ResourceMintState[_tokenId].lastUpdateTime) / 2);
+            _tokenId, _resourceToken, (currentTime + land2ResourceMineState[_tokenId].lastUpdateTime) / 2);
 
-        _mintableBalance = speed_in_current_period.mul(currentTime - land2ResourceMintState[_tokenId].lastUpdateTime).mul(1 ether).div(1 days);
+        // calculate the area of trapezoid
+        minableBalance = speed_in_current_period.mul(currentTime - land2ResourceMineState[_tokenId].lastUpdateTime).mul(1 ether).div(1 days);
     }
 
-    function _getMaxMintBalance(uint256 _tokenId, address _resourceToken) internal view returns (uint256) {
+    function _getMaxMineBalance(uint256 _tokenId, address _resourceToken) internal view returns (uint256) {
         // TODO: Every miner add one speed for now for every day
-        uint256 _mintSpeed = land2ResourceMintState[_tokenId].miners[_resourceToken].length;
+        uint256 mineSpeed = land2ResourceMineState[_tokenId].totalMinerStrength[_resourceToken];
 
         // the longest seconds to zero speed.
         uint256 currentTime = now;
-        if (land2ResourceMintState[_tokenId].lastUpdateTime >= (resourceReleaseStartTime + TOTAL_SECONDS)) {
+        if (land2ResourceMineState[_tokenId].lastUpdateTime >= (resourceReleaseStartTime + TOTAL_SECONDS)) {
             return 0;
         } else if (now > (resourceReleaseStartTime + TOTAL_SECONDS))
         {
             currentTime = (resourceReleaseStartTime + TOTAL_SECONDS);
         }
 
-        return _mintSpeed.mul(currentTime - land2ResourceMintState[_tokenId].lastUpdateTime).mul(1 ether).div(1 days);
+        return mineSpeed.mul(currentTime - land2ResourceMineState[_tokenId].lastUpdateTime).mul(1 ether).div(1 days);
     }
 
-    function mint(uint256 _tokenId) public {
-        _mintAllResource(
+    function mine(uint256 _tokenId) public {
+        _mineAllResource(
             _tokenId,
             registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN),
             registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN),
@@ -166,33 +175,33 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
         );
     }
 
-    function _mintAllResource(uint256 _tokenId, address _gold, address _wood, address _water, address _fire, address _soil) internal {
+    function _mineAllResource(uint256 _tokenId, address _gold, address _wood, address _water, address _fire, address _soil) internal {
         require(IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectClass(_tokenId) == 1, "Token must be land.");
 
-        if (land2ResourceMintState[_tokenId].lastUpdateTime == 0) {
-            land2ResourceMintState[_tokenId].lastUpdateTime = resourceReleaseStartTime;
-            land2ResourceMintState[_tokenId].lastUpdateSpeedInSeconds = TOTAL_SECONDS;
+        if (land2ResourceMineState[_tokenId].lastUpdateTime == 0) {
+            land2ResourceMineState[_tokenId].lastUpdateTime = resourceReleaseStartTime;
+            land2ResourceMineState[_tokenId].lastUpdateSpeedInSeconds = TOTAL_SECONDS;
         }
 
-        _mintResource(_tokenId, _gold);
-        _mintResource(_tokenId, _wood);
-        _mintResource(_tokenId, _water);
-        _mintResource(_tokenId, _fire);
-        _mintResource(_tokenId, _soil);
+        _mineResource(_tokenId, _gold);
+        _mineResource(_tokenId, _wood);
+        _mineResource(_tokenId, _water);
+        _mineResource(_tokenId, _fire);
+        _mineResource(_tokenId, _soil);
 
-        land2ResourceMintState[_tokenId].lastUpdateTime = now;
-        land2ResourceMintState[_tokenId].lastUpdateSpeedInSeconds = _getReleaseSpeedInSeconds(_tokenId, now);
+        land2ResourceMineState[_tokenId].lastUpdateTime = now;
+        land2ResourceMineState[_tokenId].lastUpdateSpeedInSeconds = _getReleaseSpeedInSeconds(_tokenId, now);
     }
 
-    function _mintResource(uint256 _tokenId, address _resourceToken) internal {
-        uint256 _mintedBalance = _getMaxMintBalance(_tokenId, _resourceToken);
-        uint256 _mintableBalance = _getMintableBalance(_tokenId, _resourceToken);
+    function _mineResource(uint256 _tokenId, address _resourceToken) internal {
+        uint256 _minedBalance = _getMaxMineBalance(_tokenId, _resourceToken);
+        uint256 _minableBalance = _getMinableBalance(_tokenId, _resourceToken);
 
-        if (_mintedBalance > _mintableBalance) {
-            _mintedBalance = _mintableBalance;
+        if (_minedBalance > _minableBalance) {
+            _minedBalance = _minableBalance;
         }
 
-        land2ResourceMintState[_tokenId].mintedBalance[_resourceToken] = _mintedBalance;
+        land2ResourceMineState[_tokenId].mintedBalance[_resourceToken] = _minedBalance;
     }
 
     function claimAllResource(uint256 _tokenId) public {
@@ -204,48 +213,95 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
         address fire = registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN);
         address soil = registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN);
 
-        _mintAllResource(_tokenId, gold, wood, water, fire, soil);
+        _mineAllResource(_tokenId, gold, wood, water, fire, soil);
 
-        if (land2ResourceMintState[_tokenId].mintedBalance[gold] > 0) {
-            IMintableERC20(gold).mint(msg.sender, land2ResourceMintState[_tokenId].mintedBalance[gold]);
-            land2ResourceMintState[_tokenId].mintedBalance[gold] = 0;
+        if (land2ResourceMineState[_tokenId].mintedBalance[gold] > 0) {
+            IMintableERC20(gold).mint(msg.sender, land2ResourceMineState[_tokenId].mintedBalance[gold]);
+            land2ResourceMineState[_tokenId].mintedBalance[gold] = 0;
         }
 
-        if (land2ResourceMintState[_tokenId].mintedBalance[wood] > 0) {
-            IMintableERC20(gold).mint(msg.sender, land2ResourceMintState[_tokenId].mintedBalance[wood]);
-            land2ResourceMintState[_tokenId].mintedBalance[wood] = 0;
+        if (land2ResourceMineState[_tokenId].mintedBalance[wood] > 0) {
+            IMintableERC20(gold).mint(msg.sender, land2ResourceMineState[_tokenId].mintedBalance[wood]);
+            land2ResourceMineState[_tokenId].mintedBalance[wood] = 0;
         }
 
-        if (land2ResourceMintState[_tokenId].mintedBalance[water] > 0) {
-            IMintableERC20(gold).mint(msg.sender, land2ResourceMintState[_tokenId].mintedBalance[water]);
-            land2ResourceMintState[_tokenId].mintedBalance[water] = 0;
+        if (land2ResourceMineState[_tokenId].mintedBalance[water] > 0) {
+            IMintableERC20(gold).mint(msg.sender, land2ResourceMineState[_tokenId].mintedBalance[water]);
+            land2ResourceMineState[_tokenId].mintedBalance[water] = 0;
         }
 
-        if (land2ResourceMintState[_tokenId].mintedBalance[fire] > 0) {
-            IMintableERC20(gold).mint(msg.sender, land2ResourceMintState[_tokenId].mintedBalance[fire]);
-            land2ResourceMintState[_tokenId].mintedBalance[fire] = 0;
+        if (land2ResourceMineState[_tokenId].mintedBalance[fire] > 0) {
+            IMintableERC20(gold).mint(msg.sender, land2ResourceMineState[_tokenId].mintedBalance[fire]);
+            land2ResourceMineState[_tokenId].mintedBalance[fire] = 0;
         }
 
-        if (land2ResourceMintState[_tokenId].mintedBalance[soil] > 0) {
-            IMintableERC20(gold).mint(msg.sender, land2ResourceMintState[_tokenId].mintedBalance[soil]);
-            land2ResourceMintState[_tokenId].mintedBalance[soil] = 0;
+        if (land2ResourceMineState[_tokenId].mintedBalance[soil] > 0) {
+            IMintableERC20(gold).mint(msg.sender, land2ResourceMineState[_tokenId].mintedBalance[soil]);
+            land2ResourceMineState[_tokenId].mintedBalance[soil] = 0;
         }
     }
 
+    // both for own _tokenId or hired one
     function startMining(uint256 _tokenId, uint256 _landTokenId, address _resource) public {
-        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).startTokenUseFromActivity(_tokenId, msg.sender, msg.sender, now, MAX_UINT48_TIME, 0);
+        ITokenUse tokenUse = ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE));
+        ERC721 nft = ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP));
+        require(nft.ownerOf(_tokenId) == msg.sender || tokenUse.getTokenUser(_tokenId) == msg.sender);
+        if(nft.ownerOf(_tokenId) == msg.sender ) {
+            tokenUse.startTokenUseFromActivity(_tokenId, msg.sender, msg.sender, now, MAX_UINT48_TIME, 0);
+        }
 
-        ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).transferFrom(msg.sender, registry.addressOf(CONTRACT_TOKEN_USE), _tokenId);
 
-        uint256 _index = land2ResourceMintState[_landTokenId].miners[_resource].length;
         // TODO require the permission from land owner;
-        land2ResourceMintState[_landTokenId].miners[_resource].push(_tokenId);
 
-        miner2Index[_tokenId] = MinerStatus({
-            landTokenId: _landTokenId,
-            resource: _resource,
-            indexInResource: uint64(_index)
-        });
+        // make sure that _tokenId won't be used repeatedly
+        if(miner2Index[_tokenId].landTokenId == 0) {
+            uint256 _index = land2ResourceMineState[_landTokenId].miners[_resource].length;
+
+            land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
+
+            uint256 strength = IApostle(registry.addressOf(CONTRACT_APOSTLE)).getStrength(_tokenId);
+            land2ResourceMineState[_landTokenId].totalMinerStrength[_resource] += strength;
+
+            miner2Index[_tokenId] = MinerStatus({
+                landTokenId: _landTokenId,
+                resource: _resource,
+                indexInResource: uint64(_index)
+                });
+
+            // update status!
+            mine(_landTokenId);
+        }
+    }
+
+    function batchStartMining(uint256[] _tokenIds, uint256[] _landTokenIds, address[] _resources) public {
+        ITokenUse tokenUse = ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE));
+        ERC721 nft = ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP));
+
+        require(_tokenIds.length == _landTokenIds.length && _landTokenIds.length == _resources.length, "input error");
+        // TODO: update common-contract's version
+        tokenUse.batchStartTokenUseFromActivity(_tokenIds, msg.sender, msg.sender, now, MAX_UINT48_TIME, 0);
+        uint length = _tokenIds.length;
+
+        for(uint i = 0; i < length; i++) {
+            // make sure that _tokenId won't be used repeatedly
+            if(miner2Index[_tokenIds[i]].landTokenId == 0) {
+                land2ResourceMineState[_landTokenIds[i]].miners[_resources[i]].push(_tokenIds[i]);
+                uint256 _index = land2ResourceMineState[_landTokenIds[i]].miners[_resources[i]].length;
+                uint256 strength = IApostle(registry.addressOf(CONTRACT_APOSTLE)).getStrength(_tokenIds[i]);
+                land2ResourceMineState[_landTokenIds[i]].totalMinerStrength[_resources[i]] += strength;
+
+                miner2Index[_tokenIds[i]] = MinerStatus({
+                    landTokenId: _landTokenIds[i],
+                    resource: _resources[i],
+                    indexInResource: uint64(_index)
+                    });
+
+                // update status!
+                mine(_landTokenIds[i]);
+            }
+
+        }
+
     }
 
     function isActivity() public returns (bool) {
@@ -267,17 +323,20 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
     }
 
     function _stopMining(uint256 _tokenId) public {
-        // remove the miner from land2ResourceMintState;
-        uint64 _minerIndex = miner2Index[_tokenId].indexInResource;
-        address _resouce = miner2Index[_tokenId].resource;
-        uint64 _lastMinerIndex = uint64(land2ResourceMintState[miner2Index[_tokenId].landTokenId].miners[_resouce].length - 1);
-        uint256 _lastMiner = land2ResourceMintState[miner2Index[_tokenId].landTokenId].miners[_resouce][_lastMinerIndex];
+        // remove the miner from land2ResourceMineState;
+        uint64 minerIndex = miner2Index[_tokenId].indexInResource;
+        address resource = miner2Index[_tokenId].resource;
+        uint64 lastMinerIndex = uint64(land2ResourceMineState[miner2Index[_tokenId].landTokenId].miners[resource].length - 1);
+        uint256 lastMiner = land2ResourceMineState[miner2Index[_tokenId].landTokenId].miners[resource][lastMinerIndex];
 
-        land2ResourceMintState[miner2Index[_tokenId].landTokenId].miners[_resouce][_minerIndex] = _lastMiner;
-        land2ResourceMintState[miner2Index[_tokenId].landTokenId].miners[_resouce][_lastMinerIndex] = 0;
+        land2ResourceMineState[miner2Index[_tokenId].landTokenId].miners[resource][minerIndex] = lastMiner;
+        land2ResourceMineState[miner2Index[_tokenId].landTokenId].miners[resource][lastMinerIndex] = 0;
 
-        land2ResourceMintState[miner2Index[_tokenId].landTokenId].miners[_resouce].length --;
-        miner2Index[_lastMiner].indexInResource = _minerIndex;
+        land2ResourceMineState[miner2Index[_tokenId].landTokenId].miners[resource].length--;
+        miner2Index[lastMiner].indexInResource = minerIndex;
+
+        uint256 strength = IApostle(registry.addressOf(CONTRACT_APOSTLE)).getStrength(_tokenId);
+        land2ResourceMineState[miner2Index[_tokenId].landTokenId].totalMinerStrength[resource] -= strength;
 
         delete miner2Index[_tokenId];
     }
