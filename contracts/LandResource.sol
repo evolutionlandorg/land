@@ -12,6 +12,7 @@ import "@evolutionland/common/contracts/interfaces/IActivity.sol";
 import "./interfaces/ILandBase.sol";
 import "./LandSettingIds.sol";
 import "./interfaces/IMiner.sol";
+import "./interfaces/IApostleBase.sol";
 
 /**
  * @title LandResource
@@ -245,6 +246,8 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
     function startMining(uint256 _tokenId, uint256 _landTokenId, address _resource) public {
         ITokenUse tokenUse = ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE));
         ERC721 nft = ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP));
+        // check it's pregnant status
+        require(IApostleBase(registry.addressOf(CONTRACT_MINER)).isReadyToBreed(_tokenId), "it is having baby. wait.");
         require(nft.ownerOf(_tokenId) == msg.sender || tokenUse.getTokenUser(_tokenId) == msg.sender);
         if(nft.ownerOf(_tokenId) == msg.sender ) {
             tokenUse.startTokenUseFromActivity(_tokenId, msg.sender, msg.sender, now, MAX_UINT48_TIME, 0);
