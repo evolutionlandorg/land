@@ -244,12 +244,8 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
     // both for own _tokenId or hired one
     function startMining(uint256 _tokenId, uint256 _landTokenId, address _resource) public {
         ITokenUse tokenUse = ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE));
-        ERC721 nft = ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP));
-        require(nft.ownerOf(_tokenId) == msg.sender || tokenUse.getTokenUser(_tokenId) == msg.sender);
-        if(nft.ownerOf(_tokenId) == msg.sender ) {
-            tokenUse.startTokenUseFromActivity(_tokenId, msg.sender, msg.sender, now, MAX_UINT48_TIME, 0);
-        }
 
+        tokenUse.startActivity(_tokenId, msg.sender);
 
         // TODO require the permission from land owner;
 
@@ -293,11 +289,7 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
     }
 
     function stopMining(uint256 _tokenId) public {
-        // only user can stop mining directly.
-        require(
-            ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).getTokenUser(_tokenId) == msg.sender, "Only token owner can stop the mining.");
-
-        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).stopTokenUseFromActivity(_tokenId);
+        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).stopActivity(_tokenId, msg.sender);
         _stopMining(_tokenId);
     }
 
