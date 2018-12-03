@@ -2,6 +2,7 @@ pragma solidity ^0.4.23;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
+import "openzeppelin-solidity/contracts/introspection/SupportsInterfaceWithLookup.sol";
 import "@evolutionland/common/contracts/interfaces/IMintableERC20.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
@@ -9,15 +10,15 @@ import "@evolutionland/common/contracts/SettingIds.sol";
 import "@evolutionland/common/contracts/interfaces/IInterstellarEncoder.sol";
 import "@evolutionland/common/contracts/interfaces/ITokenUse.sol";
 import "@evolutionland/common/contracts/interfaces/IActivity.sol";
+import "@evolutionland/common/contracts/interfaces/IMiner.sol";
 import "./interfaces/ILandBase.sol";
 import "./LandSettingIds.sol";
-import "./interfaces/IMiner.sol";
 
 /**
  * @title LandResource
  * @dev LandResource is registry that manage the element resources generated on Land, and related resource releasing speed.
  */
-contract LandResource is DSAuth, IActivity, LandSettingIds {
+contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSettingIds {
     using SafeMath for *;
 
     // For every seconds, the speed will decrease by current speed multiplying (DENOMINATOR_in_seconds - seconds) / DENOMINATOR_in_seconds
@@ -79,6 +80,8 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
         registry = ISettingsRegistry(_registry);
 
         resourceReleaseStartTime = _resourceReleaseStartTime;
+
+        _registerInterface(InterfaceId_IActivity);
     }
 
     // get amount of speed uint at this moment
@@ -255,7 +258,7 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
 
             land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
 
-            uint256 strength = IMiner(registry.addressOf(CONTRACT_MINER)).getStrength(_tokenId);
+            uint256 strength = IMiner(registry.addressOf(CONTRACT_RESOURCE_MINER)).strengthOf(_tokenId);
             land2ResourceMineState[_landTokenId].totalMinerStrength[_resource] += strength;
 
             miner2Index[_tokenId] = MinerStatus({
@@ -277,10 +280,6 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
             startMining(_tokenIds[i], _landTokenIds[i], _resources[i]);
         }
 
-    }
-
-    function isActivity() public returns (bool) {
-        return true;
     }
 
     // Only trigger from Token Activity.
@@ -306,7 +305,7 @@ contract LandResource is DSAuth, IActivity, LandSettingIds {
         land2ResourceMineState[miner2Index[_tokenId].landTokenId].miners[resource].length--;
         miner2Index[lastMiner].indexInResource = minerIndex;
 
-        uint256 strength = IMiner(registry.addressOf(CONTRACT_MINER)).getStrength(_tokenId);
+        uint256 strength = IMiner(registry.addressOf(CONTRACT_RESOURCE_MINER)).strengthOf(_tokenId);
         land2ResourceMineState[miner2Index[_tokenId].landTokenId].totalMinerStrength[resource] -= strength;
 
         delete miner2Index[_tokenId];
