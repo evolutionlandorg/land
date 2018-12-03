@@ -258,7 +258,9 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
 
             land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
 
-            uint256 strength = IMiner(registry.addressOf(CONTRACT_RESOURCE_MINER)).strengthOf(_tokenId);
+            address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
+            uint256 strength = IMiner(miner).strengthOf(_tokenId);
+
             land2ResourceMineState[_landTokenId].totalMinerStrength[_resource] += strength;
 
             miner2Index[_tokenId] = MinerStatus({
@@ -305,7 +307,8 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
         land2ResourceMineState[miner2Index[_tokenId].landTokenId].miners[resource].length--;
         miner2Index[lastMiner].indexInResource = minerIndex;
 
-        uint256 strength = IMiner(registry.addressOf(CONTRACT_RESOURCE_MINER)).strengthOf(_tokenId);
+        address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
+        uint256 strength = IMiner(miner).strengthOf(_tokenId);
         land2ResourceMineState[miner2Index[_tokenId].landTokenId].totalMinerStrength[resource] -= strength;
 
         delete miner2Index[_tokenId];
