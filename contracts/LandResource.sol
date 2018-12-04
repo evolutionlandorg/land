@@ -10,7 +10,7 @@ import "@evolutionland/common/contracts/SettingIds.sol";
 import "@evolutionland/common/contracts/interfaces/IInterstellarEncoder.sol";
 import "@evolutionland/common/contracts/interfaces/ITokenUse.sol";
 import "@evolutionland/common/contracts/interfaces/IActivity.sol";
-import "@evolutionland/common/contracts/interfaces/IMiner.sol";
+import "@evolutionland/common/contracts/interfaces/IMinerObject.sol";
 import "./interfaces/ILandBase.sol";
 import "./LandSettingIds.sol";
 
@@ -248,30 +248,31 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
     function startMining(uint256 _tokenId, uint256 _landTokenId, address _resource) public {
         ITokenUse tokenUse = ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE));
 
-        tokenUse.startActivity(_tokenId, msg.sender);
+        tokenUse.addActivity(_tokenId, msg.sender);
 
-        // TODO require the permission from land owner;
+        // require the permission from land owner;
+        require(msg.sender == ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(_landTokenId), "Must be the owner of the land");
 
         // make sure that _tokenId won't be used repeatedly
-        if(miner2Index[_tokenId].landTokenId == 0) {
-            uint256 _index = land2ResourceMineState[_landTokenId].miners[_resource].length;
+        require(miner2Index[_tokenId].landTokenId == 0);
 
-            land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
+        uint256 _index = land2ResourceMineState[_landTokenId].miners[_resource].length;
 
-            address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
-            uint256 strength = IMiner(miner).strengthOf(_tokenId);
+        land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
 
-            land2ResourceMineState[_landTokenId].totalMinerStrength[_resource] += strength;
+        address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
+        uint256 strength = IMinerObject(miner).strengthOf(_tokenId);
 
-            miner2Index[_tokenId] = MinerStatus({
-                landTokenId: _landTokenId,
-                resource: _resource,
-                indexInResource: uint64(_index)
-                });
+        land2ResourceMineState[_landTokenId].totalMinerStrength[_resource] += strength;
 
-            // update status!
-            mine(_landTokenId);
-        }
+        miner2Index[_tokenId] = MinerStatus({
+            landTokenId: _landTokenId,
+            resource: _resource,
+            indexInResource: uint64(_index)
+            });
+
+        // update status!
+        mine(_landTokenId);
     }
 
     function batchStartMining(uint256[] _tokenIds, uint256[] _landTokenIds, address[] _resources) public {
@@ -285,12 +286,13 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
     }
 
     // Only trigger from Token Activity.
-    function tokenUseStopped(uint256 _tokenId) public auth {
+    function activityStopped(uint256 _tokenId) public auth {
+        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).removeActivity(_tokenId, address(0));
         _stopMining(_tokenId);
     }
 
     function stopMining(uint256 _tokenId) public {
-        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).stopActivity(_tokenId, msg.sender);
+        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).removeActivity(_tokenId, msg.sender);
         _stopMining(_tokenId);
     }
 
@@ -308,7 +310,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
         miner2Index[lastMiner].indexInResource = minerIndex;
 
         address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
-        uint256 strength = IMiner(miner).strengthOf(_tokenId);
+        uint256 strength = IMinerObject(miner).strengthOf(_tokenId);
         land2ResourceMineState[miner2Index[_tokenId].landTokenId].totalMinerStrength[resource] -= strength;
 
         delete miner2Index[_tokenId];
