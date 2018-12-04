@@ -10,7 +10,7 @@ import "@evolutionland/common/contracts/SettingIds.sol";
 import "@evolutionland/common/contracts/interfaces/IInterstellarEncoder.sol";
 import "@evolutionland/common/contracts/interfaces/ITokenUse.sol";
 import "@evolutionland/common/contracts/interfaces/IActivity.sol";
-import "@evolutionland/common/contracts/interfaces/IMiner.sol";
+import "@evolutionland/common/contracts/interfaces/IMinerObject.sol";
 import "./interfaces/ILandBase.sol";
 import "./LandSettingIds.sol";
 
@@ -32,7 +32,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
     ISettingsRegistry public registry;
 
     uint256 resourceReleaseStartTime;
-    
+
     // TODO: move to global settings contract.
     uint256 public attenPerDay = 1;
     uint256 public recoverAttenPerDay = 20;
@@ -44,9 +44,9 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
     // 火, Evolution Land fire
     // 土, Evolution Land Silicon
     struct ResourceMineState {
-        mapping(address=>uint256) mintedBalance;
-        mapping(address=>uint256[]) miners;
-        mapping(address=>uint256) totalMinerStrength;
+        mapping(address => uint256) mintedBalance;
+        mapping(address => uint256[]) miners;
+        mapping(address => uint256) totalMinerStrength;
         uint256 lastUpdateSpeedInSeconds;
         uint256 lastDestoryAttenInSeconds;
         uint256 industryIndex;
@@ -58,12 +58,12 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
     struct MinerStatus {
         uint256 landTokenId;
         address resource;
-        uint64  indexInResource;
+        uint64 indexInResource;
     }
 
-    mapping (uint256 => ResourceMineState) public land2ResourceMineState;
+    mapping(uint256 => ResourceMineState) public land2ResourceMineState;
 
-    mapping (uint256 => MinerStatus) public miner2Index;
+    mapping(uint256 => MinerStatus) public miner2Index;
 
     /*
      *  Modifiers
@@ -126,8 +126,8 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
 
     function getReleaseSpeed(uint256 _tokenId, address _resourceToken, uint256 _time) public view returns (uint256 currentSpeed) {
         return ILandBase(registry.addressOf(CONTRACT_LAND_BASE))
-            .getResourceRate(_tokenId, _resourceToken).mul(_getReleaseSpeedInSeconds(_tokenId, _time))
-            .div(TOTAL_SECONDS);
+        .getResourceRate(_tokenId, _resourceToken).mul(_getReleaseSpeedInSeconds(_tokenId, _time))
+        .div(TOTAL_SECONDS);
     }
 
     /**
@@ -250,57 +250,57 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
     function startMining(uint256 _tokenId, uint256 _landTokenId, address _resource) public {
         ITokenUse tokenUse = ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE));
 
-        tokenUse.startActivity(_tokenId, msg.sender);
+        tokenUse.addActivity(_tokenId, msg.sender);
 
-        // TODO require the permission from land owner;
+        // require the permission from land owner;
+        require(msg.sender == ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(_landTokenId), "Must be the owner of the land");
 
         // make sure that _tokenId won't be used repeatedly
-        if(miner2Index[_tokenId].landTokenId == 0) {
-            uint256 _index = land2ResourceMineState[_landTokenId].miners[_resource].length;
+        require(miner2Index[_tokenId].landTokenId == 0);
 
-            land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
+        uint256 _index = land2ResourceMineState[_landTokenId].miners[_resource].length;
 
-            land2ResourceMineState[_landTokenId].totalMiners += 1;
+        land2ResourceMineState[_landTokenId].totalMiners += 1;
 
-            if(land2ResourceMineState[_landTokenId].maxMiners == 0) {
-                land2ResourceMineState[_landTokenId].maxMiners = 5;
-            }
-
-            require(land2ResourceMineState[_landTokenId].totalMiners <= land2ResourceMineState[_landTokenId].maxMiners);
-
-            address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
-            uint256 strength = IMiner(miner).strengthOf(_tokenId);
-
-            land2ResourceMineState[_landTokenId].totalMinerStrength[_resource] += strength;
-
-            miner2Index[_tokenId] = MinerStatus({
-                landTokenId: _landTokenId,
-                resource: _resource,
-                indexInResource: uint64(_index)
-                });
-
-            // update status!
-            mine(_landTokenId);
+        if (land2ResourceMineState[_landTokenId].maxMiners == 0) {
+            land2ResourceMineState[_landTokenId].maxMiners = 5;
         }
+
+        require(land2ResourceMineState[_landTokenId].totalMiners <= land2ResourceMineState[_landTokenId].maxMiners);
+
+        address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
+        uint256 strength = IMinerObject(miner).strengthOf(_tokenId, _resource);
+
+        land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
+
+        miner2Index[_tokenId] = MinerStatus({
+            landTokenId : _landTokenId,
+            resource : _resource,
+            indexInResource : uint64(_index)
+            });
+
+        // update status!
+        mine(_landTokenId);
     }
 
     function batchStartMining(uint256[] _tokenIds, uint256[] _landTokenIds, address[] _resources) public {
         require(_tokenIds.length == _landTokenIds.length && _landTokenIds.length == _resources.length, "input error");
         uint length = _tokenIds.length;
-        
-        for(uint i = 0; i < length; i++) {
+
+        for (uint i = 0; i < length; i++) {
             startMining(_tokenIds[i], _landTokenIds[i], _resources[i]);
         }
 
     }
 
     // Only trigger from Token Activity.
-    function tokenUseStopped(uint256 _tokenId) public auth {
+    function activityStopped(uint256 _tokenId) public auth {
+        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).removeActivity(_tokenId, address(0));
         _stopMining(_tokenId);
     }
 
     function stopMining(uint256 _tokenId) public {
-        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).stopActivity(_tokenId, msg.sender);
+        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).removeActivity(_tokenId, msg.sender);
         _stopMining(_tokenId);
     }
 
@@ -320,7 +320,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
         land2ResourceMineState[_tokenId].totalMiners--;
 
         address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
-        uint256 strength = IMiner(miner).strengthOf(_tokenId);
+        uint256 strength = IMinerObject(miner).strengthOf(_tokenId, resource);
         land2ResourceMineState[miner2Index[_tokenId].landTokenId].totalMinerStrength[resource] -= strength;
 
         delete miner2Index[_tokenId];
