@@ -50,7 +50,9 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
         uint256 lastUpdateSpeedInSeconds;
         uint256 lastDestoryAttenInSeconds;
         uint256 industryIndex;
-        uint256 lastUpdateTime;
+        uint128 lastUpdateTime;
+        uint64 totalMiners;
+        uint64 maxMiners;
     }
 
     struct MinerStatus {
@@ -152,7 +154,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
     }
 
     function _getMaxMineBalance(uint256 _tokenId, address _resourceToken) internal view returns (uint256) {
-        // TODO: Every miner add one speed for now for every day
+        // totalMinerStrength is in wei
         uint256 mineSpeed = land2ResourceMineState[_tokenId].totalMinerStrength[_resourceToken];
 
         // the longest seconds to zero speed.
@@ -164,7 +166,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
             currentTime = (resourceReleaseStartTime + TOTAL_SECONDS);
         }
 
-        return mineSpeed.mul(currentTime - land2ResourceMineState[_tokenId].lastUpdateTime).mul(1 ether).div(1 days);
+        return mineSpeed.mul(currentTime - land2ResourceMineState[_tokenId].lastUpdateTime).div(1 days);
     }
 
     function mine(uint256 _tokenId) public {
@@ -182,7 +184,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
         require(IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectClass(_tokenId) == 1, "Token must be land.");
 
         if (land2ResourceMineState[_tokenId].lastUpdateTime == 0) {
-            land2ResourceMineState[_tokenId].lastUpdateTime = resourceReleaseStartTime;
+            land2ResourceMineState[_tokenId].lastUpdateTime = uint128(resourceReleaseStartTime);
             land2ResourceMineState[_tokenId].lastUpdateSpeedInSeconds = TOTAL_SECONDS;
         }
 
@@ -192,7 +194,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
         _mineResource(_tokenId, _fire);
         _mineResource(_tokenId, _soil);
 
-        land2ResourceMineState[_tokenId].lastUpdateTime = now;
+        land2ResourceMineState[_tokenId].lastUpdateTime = uint128(now);
         land2ResourceMineState[_tokenId].lastUpdateSpeedInSeconds = _getReleaseSpeedInSeconds(_tokenId, now);
     }
 
@@ -258,6 +260,14 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
 
             land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
 
+            land2ResourceMineState[_landTokenId].totalMiners += 1;
+
+            if(land2ResourceMineState[_landTokenId].maxMiners == 0) {
+                land2ResourceMineState[_landTokenId].maxMiners = 5;
+            }
+
+            require(land2ResourceMineState[_landTokenId].totalMiners <= land2ResourceMineState[_landTokenId].maxMiners);
+
             address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
             uint256 strength = IMiner(miner).strengthOf(_tokenId);
 
@@ -306,6 +316,8 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
 
         land2ResourceMineState[miner2Index[_tokenId].landTokenId].miners[resource].length--;
         miner2Index[lastMiner].indexInResource = minerIndex;
+
+        land2ResourceMineState[_tokenId].totalMiners--;
 
         address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
         uint256 strength = IMiner(miner).strengthOf(_tokenId);
