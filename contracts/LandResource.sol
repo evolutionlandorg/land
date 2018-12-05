@@ -141,39 +141,20 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
      * @dev Get and Query the amount of resources available from lastUpdateTime to now for use on specific land.
      * @param _tokenId The token id of specific land.
     */
-    function _getMinableBalance(uint256 _tokenId, address _resourceToken) public view returns (uint256 minableBalance) {
-        // the longest seconds to zero speed.
-        uint256 currentTime = now;
-        if (land2ResourceMineState[_tokenId].lastUpdateTime >= (resourceReleaseStartTime + TOTAL_SECONDS)) {
-            return 0;
-        } else if (now > (resourceReleaseStartTime + TOTAL_SECONDS))
-        {
-            currentTime = (resourceReleaseStartTime + TOTAL_SECONDS);
-        }
-
-        require(currentTime >= land2ResourceMineState[_tokenId].lastUpdateTime);
+    function _getMinableBalance(uint256 _tokenId, address _resourceToken, uint256 _currentTime, uint256 _lastUpdateTime) public view returns (uint256 minableBalance) {
 
         uint256 speed_in_current_period = getReleaseSpeed(
-            _tokenId, _resourceToken, (currentTime + land2ResourceMineState[_tokenId].lastUpdateTime) / 2);
+            _tokenId, _resourceToken, (_currentTime + _lastUpdateTime) / 2);
 
         // calculate the area of trapezoid
-        minableBalance = speed_in_current_period.mul(currentTime - land2ResourceMineState[_tokenId].lastUpdateTime).mul(1 ether).div(1 days);
+        minableBalance = speed_in_current_period.mul(_currentTime - _lastUpdateTime).mul(1 ether).div(1 days);
     }
 
-    function _getMaxMineBalance(uint256 _tokenId, address _resourceToken) internal view returns (uint256) {
+    function _getMaxMineBalance(uint256 _tokenId, address _resourceToken, uint256 _currentTime, uint256 _lastUpdateTime) internal view returns (uint256) {
         // totalMinerStrength is in wei
         uint256 mineSpeed = land2ResourceMineState[_tokenId].totalMinerStrength[_resourceToken];
 
-        // the longest seconds to zero speed.
-        uint256 currentTime = now;
-        if (land2ResourceMineState[_tokenId].lastUpdateTime >= (resourceReleaseStartTime + TOTAL_SECONDS)) {
-            return 0;
-        } else if (now > (resourceReleaseStartTime + TOTAL_SECONDS))
-        {
-            currentTime = (resourceReleaseStartTime + TOTAL_SECONDS);
-        }
-
-        return mineSpeed.mul(currentTime - land2ResourceMineState[_tokenId].lastUpdateTime).div(1 days);
+        return mineSpeed.mul(_currentTime - _lastUpdateTime).div(1 days);
     }
 
     function mine(uint256 _tokenId) public {
@@ -206,14 +187,32 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
     }
 
     function _mineResource(uint256 _tokenId, address _resourceToken) internal {
-        uint256 _minedBalance = _getMaxMineBalance(_tokenId, _resourceToken);
-        uint256 _minableBalance = _getMinableBalance(_tokenId, _resourceToken);
-
-        if (_minedBalance > _minableBalance) {
-            _minedBalance = _minableBalance;
+        // the longest seconds to zero speed.
+        uint256 currentTime = now;
+        uint256 minedBalance;
+        uint256 minableBalance;
+        if (now > (resourceReleaseStartTime + TOTAL_SECONDS))
+        {
+            currentTime = (resourceReleaseStartTime + TOTAL_SECONDS);
         }
 
-        land2ResourceMineState[_tokenId].mintedBalance[_resourceToken] = _minedBalance;
+        uint256 lastUpdateTime = land2ResourceMineState[_tokenId].lastUpdateTime;
+        require(currentTime >= lastUpdateTime);
+
+        if (lastUpdateTime >= (resourceReleaseStartTime + TOTAL_SECONDS)) {
+            minedBalance = 0;
+            minableBalance = 0;
+        } else {
+            minedBalance = _getMaxMineBalance(_tokenId, _resourceToken, currentTime, lastUpdateTime);
+            minableBalance = _getMinableBalance(_tokenId, _resourceToken, currentTime, lastUpdateTime);
+        }
+
+
+        if (minedBalance > minableBalance) {
+            minedBalance = minableBalance;
+        }
+
+        land2ResourceMineState[_tokenId].mintedBalance[_resourceToken] = minedBalance;
     }
 
     function claimAllResource(uint256 _tokenId) public {
