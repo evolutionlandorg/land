@@ -66,6 +66,13 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
     mapping(uint256 => MinerStatus) public miner2Index;
 
     /*
+     *  Event
+     */
+
+    event StartMining(uint256 minerTokenId, uint256 landTokenId, address _resource, uint256 strength);
+    event StopMining(uint256 minerTokenId, uint256 landTokenId, address _resource, uint256 strength);
+
+    /*
      *  Modifiers
      */
     modifier singletonLockCall() {
@@ -279,6 +286,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
             indexInResource : uint64(_index)
             });
 
+        emit StartMining(_tokenId, _landTokenId, _resource, strength);
         // update status!
         mine(_landTokenId);
     }
@@ -308,6 +316,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
         // remove the miner from land2ResourceMineState;
         uint64 minerIndex = miner2Index[_tokenId].indexInResource;
         address resource = miner2Index[_tokenId].resource;
+        uint256 landTokenId = miner2Index[_tokenId].landTokenId;
         uint64 lastMinerIndex = uint64(land2ResourceMineState[miner2Index[_tokenId].landTokenId].miners[resource].length - 1);
         uint256 lastMiner = land2ResourceMineState[miner2Index[_tokenId].landTokenId].miners[resource][lastMinerIndex];
 
@@ -324,5 +333,8 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
         land2ResourceMineState[miner2Index[_tokenId].landTokenId].totalMinerStrength[resource] -= strength;
 
         delete miner2Index[_tokenId];
+
+        emit StopMining(_tokenId, landTokenId, resource, strength);
     }
+
 }
