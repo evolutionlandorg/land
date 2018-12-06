@@ -26,7 +26,9 @@ let tokenLocationProxy_address;
 
 module.exports = async (deployer, network, accounts) => {
 
-    // deployer.deploy(LandBaseAuthority);
+    if(network == 'kovan') {
+        return;
+    }
 
     deployer.deploy(StandardERC223, "GOLD"
     ).then(async() => {
