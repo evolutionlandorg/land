@@ -256,7 +256,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
     function startMining(uint256 _tokenId, uint256 _landTokenId, address _resource) public {
         ITokenUse tokenUse = ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE));
 
-        tokenUse.addActivity(_tokenId, msg.sender);
+        tokenUse.addActivity(_tokenId, msg.sender, 0);
 
         // require the permission from land owner;
         require(msg.sender == ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(_landTokenId), "Must be the owner of the land");
