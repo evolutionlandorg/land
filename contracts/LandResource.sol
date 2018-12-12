@@ -302,7 +302,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
 
     // Only trigger from Token Activity.
     function activityStopped(uint256 _tokenId) public auth {
-        ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).removeActivity(_tokenId, address(0));
+
         _stopMining(_tokenId);
     }
 
