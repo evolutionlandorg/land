@@ -31,7 +31,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
 
     ISettingsRegistry public registry;
 
-    uint256 resourceReleaseStartTime;
+    uint256 public resourceReleaseStartTime;
 
     // TODO: move to global settings contract.
     uint256 public attenPerDay = 1;
@@ -95,8 +95,8 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
 
     // get amount of speed uint at this moment
     function _getReleaseSpeedInSeconds(uint256 _tokenId, uint256 _time) internal view returns (uint256 currentSpeed) {
-        require(_time > resourceReleaseStartTime, "Should after release time");
-        require(_time > land2ResourceMineState[_tokenId].lastUpdateTime, "Should after release last update time");
+        require(_time >= resourceReleaseStartTime, "Should after release time");
+        require(_time >= land2ResourceMineState[_tokenId].lastUpdateTime, "Should after release last update time");
 
         // after 10000 days from start
         // the resource release speed decreases to 0
