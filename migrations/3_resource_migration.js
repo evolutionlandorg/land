@@ -8,7 +8,7 @@ const conf = {
 }
 
 module.exports = async(deployer, network) => {
-    if(network != 'kovan') {
+    if(network == 'kovan') {
         return;
     }
 
