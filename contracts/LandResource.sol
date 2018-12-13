@@ -308,7 +308,6 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
 
     function stopMining(uint256 _tokenId) public {
         ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).removeActivity(_tokenId, msg.sender);
-        _stopMining(_tokenId);
     }
 
     function _stopMining(uint256 _tokenId) public {
