@@ -383,4 +383,8 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
         return (availableGold, availableWood, availableWater, availableFire, availableSoil);
     }
 
+    function mintedBalanceOnLand(uint256 _landTokenId, address _resourceToken) public view returns (uint256) {
+        return land2ResourceMineState[_landTokenId].mintedBalance[_resourceToken];
+    }
+
 }
