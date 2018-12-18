@@ -249,25 +249,25 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
 
         if (land2ResourceMineState[_landTokenId].mintedBalance[wood] > 0) {
             woodBalance = land2ResourceMineState[_landTokenId].mintedBalance[wood];
-            IMintableERC20(gold).mint(msg.sender, woodBalance);
+            IMintableERC20(wood).mint(msg.sender, woodBalance);
             land2ResourceMineState[_landTokenId].mintedBalance[wood] = 0;
         }
 
         if (land2ResourceMineState[_landTokenId].mintedBalance[water] > 0) {
             waterBalance = land2ResourceMineState[_landTokenId].mintedBalance[water];
-            IMintableERC20(gold).mint(msg.sender, waterBalance);
+            IMintableERC20(water).mint(msg.sender, waterBalance);
             land2ResourceMineState[_landTokenId].mintedBalance[water] = 0;
         }
 
         if (land2ResourceMineState[_landTokenId].mintedBalance[fire] > 0) {
             fireBalance = land2ResourceMineState[_landTokenId].mintedBalance[fire];
-            IMintableERC20(gold).mint(msg.sender, fireBalance);
+            IMintableERC20(fire).mint(msg.sender, fireBalance);
             land2ResourceMineState[_landTokenId].mintedBalance[fire] = 0;
         }
 
         if (land2ResourceMineState[_landTokenId].mintedBalance[soil] > 0) {
             soilBalance = land2ResourceMineState[_landTokenId].mintedBalance[soil];
-            IMintableERC20(gold).mint(msg.sender, soilBalance);
+            IMintableERC20(soil).mint(msg.sender, soilBalance);
             land2ResourceMineState[_landTokenId].mintedBalance[soil] = 0;
         }
 
