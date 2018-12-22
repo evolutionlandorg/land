@@ -300,7 +300,7 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
         require(land2ResourceMineState[_landTokenId].totalMiners <= land2ResourceMineState[_landTokenId].maxMiners);
 
         address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
-        uint256 strength = IMinerObject(miner).strengthOf(_tokenId, _resource);
+        uint256 strength = IMinerObject(miner).strengthOf(_tokenId, _resource, _landTokenId);
 
         land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
         land2ResourceMineState[_landTokenId].totalMinerStrength[_resource] += strength;
