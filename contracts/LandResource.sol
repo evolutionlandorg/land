@@ -368,6 +368,10 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
             }
         }
 
+        if(land2ResourceMineState[landTokenId].totalMiners == 0) {
+            land2ResourceMineState[landTokenId].totalMinerStrength[resource] = 0;
+        }
+
         delete miner2Index[_tokenId];
 
         emit StopMining(_tokenId, landTokenId, resource, strength);
