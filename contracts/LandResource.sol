@@ -356,8 +356,21 @@ contract LandResource is SupportsInterfaceWithLookup, DSAuth, IActivity, LandSet
         land2ResourceMineState[landTokenId].totalMiners -= 1;
 
         address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_tokenId);
-        uint256 strength = IMinerObject(miner).strengthOf(_tokenId, resource);
-        land2ResourceMineState[landTokenId].totalMinerStrength[resource] = land2ResourceMineState[landTokenId].totalMinerStrength[resource].sub(strength);
+        uint256 strength = IMinerObject(miner).strengthOf(_tokenId, resource, landTokenId);
+
+        // for backward compatibility
+        // if strength can fluctuate some time in the future
+        if(land2ResourceMineState[landTokenId].totalMinerStrength[resource] != 0) {
+            if(land2ResourceMineState[landTokenId].totalMinerStrength[resource] > strength) {
+                land2ResourceMineState[landTokenId].totalMinerStrength[resource] = land2ResourceMineState[landTokenId].totalMinerStrength[resource].sub(strength);
+            } else {
+                land2ResourceMineState[landTokenId].totalMinerStrength[resource] = 0;
+            }
+        }
+
+        if(land2ResourceMineState[landTokenId].totalMiners == 0) {
+            land2ResourceMineState[landTokenId].totalMinerStrength[resource] = 0;
+        }
 
         delete miner2Index[_tokenId];
 
