@@ -19,21 +19,9 @@ module.exports = async(deployer, network) => {
 
     deployer.deploy(MintAndBurnAuthority, [conf.landResourceProxy_address]).then(async() => {
         await StandardERC223.at(conf.gold_address).setAuthority(MintAndBurnAuthority.address);
-    }).then(async() => {
-        await deployer.deploy(MintAndBurnAuthority, [conf.landResourceProxy_address])
-    }).then(async() => {
         await StandardERC223.at(conf.wood_address).setAuthority(MintAndBurnAuthority.address);
-    }).then(async() => {
-        await deployer.deploy(MintAndBurnAuthority, [conf.landResourceProxy_address])
-    }).then(async() => {
         await StandardERC223.at(conf.water_address).setAuthority(MintAndBurnAuthority.address);
-    }).then(async() => {
-        await deployer.deploy(MintAndBurnAuthority, [conf.landResourceProxy_address])
-    }).then(async() => {
         await StandardERC223.at(conf.fire_address).setAuthority(MintAndBurnAuthority.address);
-    }).then(async() => {
-        await deployer.deploy(MintAndBurnAuthority, [conf.landResourceProxy_address])
-    }).then(async() => {
         await StandardERC223.at(conf.soil_address).setAuthority(MintAndBurnAuthority.address);
     })
 }
