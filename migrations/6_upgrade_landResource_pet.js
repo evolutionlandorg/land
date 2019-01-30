@@ -5,7 +5,7 @@ const LandResourceAuthorityV3 = artifacts.require("LandResourceAuthorityV3");
 const conf = {
     landResourceProxy_address: '0x6bcb3c94040ba63e4da086f2a8d0d6f5f72b8490',
     tokenUseProxy_address: '0xd2bcd143db59ddd43df2002fbf650e46b2b7ea19',
-    ckAdaptorProxy_address: '0x4122003245bd1dd45e32d241c629ce6194768aba'
+    petBaseProxy_address: '0x9038cf766688c8e9b19552f464b514f9760fdc49'
 }
 
 module.exports = async (deployer, network) => {
@@ -16,7 +16,7 @@ module.exports = async (deployer, network) => {
 
     deployer.deploy(LandResourceV3).then(async () => {
         await Proxy.at(conf.landResourceProxy_address).upgradeTo(LandResourceV3.address);
-        await deployer.deploy(LandResourceAuthorityV3, [conf.tokenUseProxy_address, conf.ckAdaptorProxy_address]);
+        await deployer.deploy(LandResourceAuthorityV3, [conf.tokenUseProxy_address, conf.petBaseProxy_address]);
     }).then(async() => {
 
         // setAuthority

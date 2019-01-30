@@ -14,6 +14,7 @@ contract LandResourceAuthorityV3 {
         address _src, address _dst, bytes4 _sig
     ) public view returns (bool) {
         return ( whiteList[_src] && _sig == bytes4(keccak256("activityStopped(uint256)"))) ||
-                ( whiteList[_src] && _sig == bytes4(keccak256("updateMinerStrength(uint256,address,bool)")));
+                ( whiteList[_src] && _sig == bytes4(keccak256("updateMinerStrengthWhenStop(uint256,address)"))) ||
+            ( whiteList[_src] && _sig == bytes4(keccak256("updateMinerStrengthWhenStart(uint256,address)")));
     }
 }
