@@ -416,11 +416,11 @@ contract LandResourceV3 is SupportsInterfaceWithLookup, DSAuth, IActivity, LandS
 
 
 
-    function _updateMinerStrength(uint256 _apostleTokenId, address _landOwner, bool _isStop) internal returns (uint256, uint256){
+    function _updateMinerStrength(uint256 _apostleTokenId, bool _isStop) internal returns (uint256, uint256){
         // require that this apostle
         uint256 landTokenId = landWorkingOn(_apostleTokenId);
         require(landTokenId != 0, "this apostle is not mining.");
-        require(ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(landTokenId) == _landOwner, "you have no right.");
+
         address resource = miner2Index[_apostleTokenId].resource;
 
         address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_apostleTokenId);
@@ -441,19 +441,19 @@ contract LandResourceV3 is SupportsInterfaceWithLookup, DSAuth, IActivity, LandS
     // we need to update status and remove this apostle from mining list first
     // open authority to PetBase
     // can only be called by PetBase
-    function updateMinerStrengthWhenStop(uint256 _apostleTokenId, address _landOwner) public auth {
+    function updateMinerStrengthWhenStop(uint256 _apostleTokenId) public auth {
         uint256 landTokenId;
         uint256 strength;
-        (landTokenId, strength) = _updateMinerStrength(_apostleTokenId, _landOwner, true);
+        (landTokenId, strength) = _updateMinerStrength(_apostleTokenId, true);
         // _isStop == true - minus strength
         // _isStop == false - add strength
         emit UpdateMiningStrengthWhenStop(_apostleTokenId, landTokenId, strength);
     }
 
-    function updateMinerStrengthWhenStart(uint256 _apostleTokenId, address _landOwner) public auth {
+    function updateMinerStrengthWhenStart(uint256 _apostleTokenId) public auth {
         uint256 landTokenId;
         uint256 strength;
-        (landTokenId, strength) = _updateMinerStrength(_apostleTokenId, _landOwner, false);
+        (landTokenId, strength) = _updateMinerStrength(_apostleTokenId, false);
         // _isStop == true - minus strength
         // _isStop == false - add strength
         emit UpdateMiningStrengthWhenStart(_apostleTokenId, landTokenId, strength);
