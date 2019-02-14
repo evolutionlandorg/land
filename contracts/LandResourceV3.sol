@@ -79,7 +79,8 @@ contract LandResourceV3 is SupportsInterfaceWithLookup, DSAuth, IActivity, LandS
     event StopMining(uint256 minerTokenId, uint256 landTokenId, address _resource, uint256 strength);
     event ResourceClaimed(address owner, uint256 landTokenId, uint256 goldBalance, uint256 woodBalance, uint256 waterBalance, uint256 fireBalance, uint256 soilBalance);
 
-    event UpdateMiningStrength(uint256 apostleTokenId, uint256 landTokenId, uint256 strength, bool isStop);
+    event UpdateMiningStrengthWhenStop(uint256 apostleTokenId, uint256 landTokenId, uint256 strength);
+    event UpdateMiningStrengthWhenStart(uint256 apostleTokenId, uint256 landTokenId, uint256 strength);
     /*
      *  Modifiers
      */
@@ -414,15 +415,12 @@ contract LandResourceV3 is SupportsInterfaceWithLookup, DSAuth, IActivity, LandS
 
 
 
-    // when a mirrorToken or a pet has tied to apostle
-    // we need to update status and remove this apostle from mining list first
-    // open authority to ERC721Bridge
-    // can only be called by ERC72Bridge
-    function updateMinerStrength(uint256 _apostleTokenId, address _landOwner, bool _isStop) public auth {
+
+    function _updateMinerStrength(uint256 _apostleTokenId, bool _isStop) internal returns (uint256, uint256){
         // require that this apostle
         uint256 landTokenId = landWorkingOn(_apostleTokenId);
         require(landTokenId != 0, "this apostle is not mining.");
-        require(ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(landTokenId) == _landOwner, "you have no right.");
+
         address resource = miner2Index[_apostleTokenId].resource;
 
         address miner = IInterstellarEncoder(registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)).getObjectAddress(_apostleTokenId);
@@ -436,10 +434,29 @@ contract LandResourceV3 is SupportsInterfaceWithLookup, DSAuth, IActivity, LandS
             land2ResourceMineState[landTokenId].totalMinerStrength[resource] += strength;
         }
 
+        return (landTokenId, strength);
+    }
+
+    // when a mirrorToken or a pet has tied to apostle
+    // we need to update status and remove this apostle from mining list first
+    // open authority to PetBase
+    // can only be called by PetBase
+    function updateMinerStrengthWhenStop(uint256 _apostleTokenId) public auth {
+        uint256 landTokenId;
+        uint256 strength;
+        (landTokenId, strength) = _updateMinerStrength(_apostleTokenId, true);
         // _isStop == true - minus strength
         // _isStop == false - add strength
-        emit UpdateMiningStrength(_apostleTokenId, landTokenId, strength, _isStop);
+        emit UpdateMiningStrengthWhenStop(_apostleTokenId, landTokenId, strength);
+    }
 
+    function updateMinerStrengthWhenStart(uint256 _apostleTokenId) public auth {
+        uint256 landTokenId;
+        uint256 strength;
+        (landTokenId, strength) = _updateMinerStrength(_apostleTokenId, false);
+        // _isStop == true - minus strength
+        // _isStop == false - add strength
+        emit UpdateMiningStrengthWhenStart(_apostleTokenId, landTokenId, strength);
     }
 
 }
