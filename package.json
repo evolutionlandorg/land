@@ -3,6 +3,10 @@
   "version": "1.4.1",
   "description": "Land Contracts for Evolution Land",
   "main": "truffle-config.js",
+  "scripts": {
+    "build": "npx waffle",
+    "flatten": "npx waffle flatten"
+  },
   "directories": {
     "test": "test"
   },
@@ -21,7 +25,9 @@
     "truffle-privatekey-provider": "^0.1.0",
     "web3": "^1.0.0-beta.34"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "ethereum-waffle": "^3.2.1"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/evolutionlandorg/land.git"
