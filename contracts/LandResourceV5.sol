@@ -8,7 +8,7 @@ contract LandResourceV5 is LandResourceV4 {
 	bytes32 public constant CONTRACT_LAND_ITEM_BAR = "CONTRACT_LAND_ITEM_BAR";
 
 	// rate precision
-	uint112 public constant RATE_DECIMALS = 10**8;
+	uint128 public constant RATE_PRECISION = 10**8;
 
 	mapping(uint256 => mapping(address => mapping(address => uint256))) land2ItemBarMinedStrength;
 
@@ -62,7 +62,7 @@ contract LandResourceV5 is LandResourceV4 {
 		address itemBar = registry.addressOf(CONTRACT_LAND_ITEM_BAR);
 		uint256 enhanceRate =
 			IItemBar(itemBar).enhanceStrengthRateOf(_resource, _landTokenId);
-		uint256 enhanceStrength = strength.mul(enhanceRate).div(RATE_DECIMALS);
+		uint256 enhanceStrength = strength.mul(enhanceRate).div(RATE_PRECISION);
 		uint256 totalStrength = strength.add(enhanceStrength);
 
 		land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
@@ -124,7 +124,7 @@ contract LandResourceV5 is LandResourceV4 {
 		address itemBar = registry.addressOf(CONTRACT_LAND_ITEM_BAR);
 		uint256 enhanceRate =
 			IItemBar(itemBar).enhanceStrengthRateOf(resource, landTokenId);
-		uint256 enhanceStrength = strength.mul(enhanceRate).div(RATE_DECIMALS);
+		uint256 enhanceStrength = strength.mul(enhanceRate).div(RATE_PRECISION);
 		uint256 totalStrength = strength.add(enhanceStrength);
 
 		// for backward compatibility
@@ -269,7 +269,7 @@ contract LandResourceV5 is LandResourceV4 {
 		address itemBar = registry.addressOf(CONTRACT_LAND_ITEM_BAR);
 		uint256 enhanceRate =
 			IItemBar(itemBar).enhanceStrengthRateOf(resource, landTokenId);
-		uint256 enhanceStrength = strength.mul(enhanceRate).div(RATE_DECIMALS);
+		uint256 enhanceStrength = strength.mul(enhanceRate).div(RATE_PRECISION);
 		uint256 totalStrength = strength.add(enhanceStrength);
 
 		if (_isStop) {
@@ -322,7 +322,7 @@ contract LandResourceV5 is LandResourceV4 {
 				_landTokenId
 			);
 		uint256 landBalance =
-			minedBalance.mul(RATE_DECIMALS).div(enhanceRate.add(RATE_DECIMALS));
+			minedBalance.mul(RATE_PRECISION).div(enhanceRate.add(RATE_PRECISION));
 		uint256 itemBalance = minedBalance.sub(landBalance);
 		uint256 maxAmount = IItemBar(itemBar).maxAmount();
 		for (uint256 i = 0; i < maxAmount; i++) {
@@ -508,8 +508,8 @@ contract LandResourceV5 is LandResourceV4 {
 			);
 		uint256 itemBalance =
 			_minedBalance.sub(
-				_minedBalance.mul(RATE_DECIMALS).div(
-					enhanceRate.add(RATE_DECIMALS)
+				_minedBalance.mul(RATE_PRECISION).div(
+					enhanceRate.add(RATE_PRECISION)
 				)
 			);
 		uint256 callerResource;
