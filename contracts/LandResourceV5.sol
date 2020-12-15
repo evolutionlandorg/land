@@ -47,7 +47,8 @@ contract LandResourceV5 is LandResourceV4 {
 
 		require(
 			land2ResourceMineState[_landTokenId].totalMiners <=
-				land2ResourceMineState[_landTokenId].maxMiners
+				land2ResourceMineState[_landTokenId].maxMiners,
+			"Land: EXCEED_MINER_LIMIT"
 		);
 
 		address miner =
@@ -327,8 +328,7 @@ contract LandResourceV5 is LandResourceV4 {
 
 	function isBarStaker(uint256 _landTokenId) internal view returns (bool) {
 		address itemBar = registry.addressOf(CONTRACT_LAND_ITEM_BAR);
-		uint256 maxAmount = IItemBar(itemBar).maxAmount();
-		for (uint256 i = 0; i < maxAmount; i++) {
+		for (uint256 i = 0; i < IItemBar(itemBar).maxAmount(); i++) {
 			address barStaker = IItemBar(itemBar).getBarStaker(_landTokenId, i);
 			if (msg.sender == barStaker) {
 				return true;
@@ -355,26 +355,32 @@ contract LandResourceV5 is LandResourceV4 {
 			minedBalance.mul(RATE_PRECISION).div(
 				enhanceRate.add(RATE_PRECISION)
 			);
-		uint256 itemBalance = minedBalance.sub(landBalance);
-		uint256 maxAmount = IItemBar(itemBar).maxAmount();
-		for (uint256 i = 0; i < maxAmount; i++) {
-			uint256 barRate =
-				IItemBar(itemBar).enhanceStrengthRateByindex(
-					_resourceToken,
-					_landTokenId,
-					i
-				);
-			uint256 barBalance = itemBalance.mul(barRate).div(enhanceRate);
-			address barStaker = IItemBar(itemBar).getBarStaker(_landTokenId, i);
-			//TODO:: give fee to lander
-			land2ItemBarMinedStrength[_landTokenId][barStaker][
-				_resourceToken
-			] = barBalance;
+		if (enhanceRate > 0) {
+			uint256 itemBalance = minedBalance.sub(landBalance);
+			for (uint256 i = 0; i < IItemBar(itemBar).maxAmount(); i++) {
+				uint256 barRate =
+					IItemBar(itemBar).enhanceStrengthRateByIndex(
+						_resourceToken,
+						_landTokenId,
+						i
+					);
+				uint256 barBalance = itemBalance.mul(barRate).div(enhanceRate);
+				address barStaker =
+					IItemBar(itemBar).getBarStaker(_landTokenId, i);
+				//TODO:: give fee to lander
+				land2ItemBarMinedStrength[_landTokenId][barStaker][
+					_resourceToken
+				] = land2ItemBarMinedStrength[_landTokenId][barStaker][
+					_resourceToken
+				]
+					.add(barBalance);
+			}
 		}
 
 		land2ResourceMineState[_landTokenId].mintedBalance[
 			_resourceToken
-		] += landBalance;
+		] = land2ResourceMineState[_landTokenId].mintedBalance[_resourceToken]
+			.add(landBalance);
 	}
 
 	function claimBarResource(uint256 _landTokenId) public {
@@ -538,26 +544,31 @@ contract LandResourceV5 is LandResourceV4 {
 				_resourceToken,
 				_landTokenId
 			);
-		uint256 itemBalance =
-			_minedBalance.sub(
-				_minedBalance.mul(RATE_PRECISION).div(
-					enhanceRate.add(RATE_PRECISION)
-				)
+		// V5 yeild distribution
+		uint256 landBalance =
+			_minedBalance.mul(RATE_PRECISION).div(
+				enhanceRate.add(RATE_PRECISION)
 			);
+
 		uint256 callerResource;
-		{
+		if (isLander(_landTokenId)) {
+			callerResource = callerResource.add(landBalance);
+		}
+		if (enhanceRate > 0) {
+			uint256 itemBalance = _minedBalance.sub(landBalance);
 			for (uint256 i = 0; i < IItemBar(itemBar).maxAmount(); i++) {
 				uint256 barRate =
-					IItemBar(itemBar).enhanceStrengthRateByindex(
+					IItemBar(itemBar).enhanceStrengthRateByIndex(
 						_resourceToken,
 						_landTokenId,
 						i
 					);
 				uint256 barBalance = itemBalance.mul(barRate).div(enhanceRate);
-				address barStaker =
-					IItemBar(itemBar).getBarStaker(_landTokenId, i);
 				//TODO:: give fee to lander
-				if (msg.sender == barStaker) {
+				if (
+					msg.sender ==
+					IItemBar(itemBar).getBarStaker(_landTokenId, i)
+				) {
 					callerResource = callerResource.add(barBalance);
 				}
 			}
@@ -583,8 +594,14 @@ contract LandResourceV5 is LandResourceV4 {
 		for (uint256 i = 0; i < 5; i++) {
 			uint256 mined =
 				_calculateMinedBalance(_landTokenId, _resourceTokens[i], now);
+
 			uint256 available =
 				_calculateBarResources(_landTokenId, _resourceTokens[i], mined);
+			available = available.add(
+				land2ItemBarMinedStrength[_landTokenId][msg.sender][
+					_resourceTokens[i]
+				]
+			);
 			if (isLander(_landTokenId)) {
 				available = available.add(
 					land2ResourceMineState[_landTokenId].mintedBalance[

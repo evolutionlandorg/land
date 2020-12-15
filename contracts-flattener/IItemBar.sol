@@ -10,7 +10,7 @@ interface IItemBar {
 
 	function maxAmount() external view returns (uint256);
 
-	function enhanceStrengthRateByindex(
+	function enhanceStrengthRateByIndex(
 		address _resourceToken,
 		uint256 _landTokenId,
 		uint256 _index
