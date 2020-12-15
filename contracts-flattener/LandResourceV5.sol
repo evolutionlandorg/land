@@ -1257,7 +1257,7 @@ contract LandResourceV5 is LandResourceV4 {
 	}
 
 	function updateMinerStrengthWhenStop(uint256 _apostleTokenId) public auth {
-		if (miner2Index[_apostleTokenId].landTokenId > 0) {
+		if (miner2Index[_apostleTokenId].landTokenId == 0) {
 			return;
 		}
 		(uint256 landTokenId, uint256 strength) =
@@ -1272,7 +1272,7 @@ contract LandResourceV5 is LandResourceV4 {
 	}
 
 	function updateMinerStrengthWhenStart(uint256 _apostleTokenId) public auth {
-		if (miner2Index[_apostleTokenId].landTokenId > 0) {
+		if (miner2Index[_apostleTokenId].landTokenId == 0) {
 			return;
 		}
 		(uint256 landTokenId, uint256 strength) =
