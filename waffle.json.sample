@@ -5,5 +5,5 @@
   "flattenOutputDirectory": "./contracts-flattener",
   "cacheDirectory": "./cache",
   "compilerType": "solcjs",
-  "compilerVersion": "0.4.25"
+  "compilerVersion": "0.4.24"
 }

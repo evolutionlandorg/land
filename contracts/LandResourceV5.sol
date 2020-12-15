@@ -162,6 +162,36 @@ contract LandResourceV5 is LandResourceV4 {
 		emit StopMining(_tokenId, landTokenId, resource, totalStrength);
 	}
 
+	function updateMinerStrengthWhenStop(uint256 _apostleTokenId) public auth {
+		if (miner2Index[_apostleTokenId].landTokenId > 0) {
+			return;
+		}
+		(uint256 landTokenId, uint256 strength) =
+			_updateMinerStrength(_apostleTokenId, true);
+		// _isStop == true - minus strength
+		// _isStop == false - add strength
+		emit UpdateMiningStrengthWhenStop(
+			_apostleTokenId,
+			landTokenId,
+			strength
+		);
+	}
+
+	function updateMinerStrengthWhenStart(uint256 _apostleTokenId) public auth {
+		if (miner2Index[_apostleTokenId].landTokenId > 0) {
+			return;
+		}
+		(uint256 landTokenId, uint256 strength) =
+			_updateMinerStrength(_apostleTokenId, false);
+		// _isStop == true - minus strength
+		// _isStop == false - add strength
+		emit UpdateMiningStrengthWhenStart(
+			_apostleTokenId,
+			landTokenId,
+			strength
+		);
+	}
+
 	// can only be called by ItemBar
 	// _isStop == true - minus strength
 	function updateAllMinerStrengthWhenStop(uint256 _landTokenId) public auth {
@@ -322,7 +352,9 @@ contract LandResourceV5 is LandResourceV4 {
 				_landTokenId
 			);
 		uint256 landBalance =
-			minedBalance.mul(RATE_PRECISION).div(enhanceRate.add(RATE_PRECISION));
+			minedBalance.mul(RATE_PRECISION).div(
+				enhanceRate.add(RATE_PRECISION)
+			);
 		uint256 itemBalance = minedBalance.sub(landBalance);
 		uint256 maxAmount = IItemBar(itemBar).maxAmount();
 		for (uint256 i = 0; i < maxAmount; i++) {
