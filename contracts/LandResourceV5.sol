@@ -4,6 +4,7 @@ import "./interfaces/IItemBar.sol";
 import "./LandResourceV4.sol";
 
 contract LandResourceV5 is LandResourceV4 {
+	event ClearAllMiningStrengthWhenStop(uint256 indexed landTokenId);
 	// 0x434f4e54524143545f4c414e445f4954454d5f42415200000000000000000000
 	bytes32 public constant CONTRACT_LAND_ITEM_BAR = "CONTRACT_LAND_ITEM_BAR";
 
@@ -199,31 +200,18 @@ contract LandResourceV5 is LandResourceV4 {
 		if (land2ResourceMineState[_landTokenId].totalMiners == 0) {
 			return;
 		}
-		_updateMinweStrengthByElement(
-			_landTokenId,
-			registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN),
-			true
-		);
-		_updateMinweStrengthByElement(
-			_landTokenId,
-			registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN),
-			true
-		);
-		_updateMinweStrengthByElement(
-			_landTokenId,
-			registry.addressOf(CONTRACT_WATER_ERC20_TOKEN),
-			true
-		);
-		_updateMinweStrengthByElement(
-			_landTokenId,
-			registry.addressOf(CONTRACT_WATER_ERC20_TOKEN),
-			true
-		);
-		_updateMinweStrengthByElement(
-			_landTokenId,
-			registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN),
-			true
-		);
+		mine(_landTokenId);
+		address gold = registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN);
+		address wood = registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN);
+		address water = registry.addressOf(CONTRACT_WATER_ERC20_TOKEN);
+		address fire = registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN);
+		address soil = registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN);
+		land2ResourceMineState[_landTokenId].totalMinerStrength[gold] = 0;
+		land2ResourceMineState[_landTokenId].totalMinerStrength[wood] = 0;
+		land2ResourceMineState[_landTokenId].totalMinerStrength[water] = 0;
+		land2ResourceMineState[_landTokenId].totalMinerStrength[fire] = 0;
+		land2ResourceMineState[_landTokenId].totalMinerStrength[soil] = 0;
+		emit ClearAllMiningStrengthWhenStop(_landTokenId);
 	}
 
 	// can only be called by ItemBar
@@ -232,43 +220,37 @@ contract LandResourceV5 is LandResourceV4 {
 		if (land2ResourceMineState[_landTokenId].totalMiners == 0) {
 			return;
 		}
-		_updateMinweStrengthByElement(
+		_updateMinerStrengthByElement(
 			_landTokenId,
-			registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN),
-			false
+			registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN)
 		);
-		_updateMinweStrengthByElement(
+		_updateMinerStrengthByElement(
 			_landTokenId,
-			registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN),
-			false
+			registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN)
 		);
-		_updateMinweStrengthByElement(
+		_updateMinerStrengthByElement(
 			_landTokenId,
-			registry.addressOf(CONTRACT_WATER_ERC20_TOKEN),
-			false
+			registry.addressOf(CONTRACT_WATER_ERC20_TOKEN)
 		);
-		_updateMinweStrengthByElement(
+		_updateMinerStrengthByElement(
 			_landTokenId,
-			registry.addressOf(CONTRACT_WATER_ERC20_TOKEN),
-			false
+			registry.addressOf(CONTRACT_WATER_ERC20_TOKEN)
 		);
-		_updateMinweStrengthByElement(
+		_updateMinerStrengthByElement(
 			_landTokenId,
-			registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN),
-			false
+			registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN)
 		);
 	}
 
-	function _updateMinweStrengthByElement(
+	function _updateMinerStrengthByElement(
 		uint256 _landTokenId,
-		address _resourceToken,
-		bool _isStop
+		address _resourceToken
 	) internal {
 		uint256[] memory miners =
 			land2ResourceMineState[_landTokenId].miners[_resourceToken];
 		for (uint256 i = 0; i < miners.length; i++) {
 			(uint256 landTokenId, uint256 strength) =
-				_updateMinerStrength(miners[i], _isStop);
+				_updateMinerStrength(miners[i], false);
 			emit UpdateMiningStrengthWhenStop(miners[i], landTokenId, strength);
 		}
 	}
@@ -295,7 +277,6 @@ contract LandResourceV5 is LandResourceV4 {
 				landTokenId
 			);
 
-		mine(landTokenId);
 		// V5 add item bar
 		address itemBar = registry.addressOf(CONTRACT_LAND_ITEM_BAR);
 		uint256 enhanceRate =
@@ -304,6 +285,7 @@ contract LandResourceV5 is LandResourceV4 {
 		uint256 totalStrength = strength.add(enhanceStrength);
 
 		if (_isStop) {
+			mine(landTokenId);
 			land2ResourceMineState[landTokenId].totalMinerStrength[
 				resource
 			] = land2ResourceMineState[landTokenId].totalMinerStrength[resource]
@@ -528,9 +510,13 @@ contract LandResourceV5 is LandResourceV4 {
 
 		_mineAllResource(_landTokenId, gold, wood, water, fire, soil);
 
-		claimLandResource(_landTokenId);
+		if (isLander(_landTokenId)) {
+			claimLandResource(_landTokenId);
+		}
 
-		claimBarResource(_landTokenId);
+		if (isBarStaker(_landTokenId)) {
+			claimBarResource(_landTokenId);
+		}
 	}
 
 	function _calculateBarResources(
