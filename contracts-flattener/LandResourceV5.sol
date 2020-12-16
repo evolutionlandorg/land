@@ -1105,7 +1105,8 @@ contract LandResourceV5 is LandResourceV4 {
 	// rate precision
 	uint128 public constant RATE_PRECISION = 10**8;
 
-	mapping(uint256 => mapping(address => mapping(address => uint256))) land2ItemBarMinedStrength;
+	mapping(uint256 => mapping(address => mapping(address => uint256)))
+		public land2ItemBarMinedStrength;
 
 	function startMining(
 		uint256 _tokenId,
@@ -1394,9 +1395,13 @@ contract LandResourceV5 is LandResourceV4 {
 		return (landTokenId, totalStrength);
 	}
 
-	function isLander(uint256 _landTokenId) internal view returns (bool) {
+	function isLander(uint256 _landTokenId, address _to)
+		internal
+		view
+		returns (bool)
+	{
 		return
-			msg.sender ==
+			_to ==
 			ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(
 				_landTokenId
 			);
@@ -1460,8 +1465,6 @@ contract LandResourceV5 is LandResourceV4 {
 	}
 
 	function claimBarResource(uint256 _landTokenId) public {
-		require(isBarStaker(_landTokenId), "Only Bar starker.");
-
 		address gold = registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN);
 		address wood = registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN);
 		address water = registry.addressOf(CONTRACT_WATER_ERC20_TOKEN);
@@ -1525,7 +1528,10 @@ contract LandResourceV5 is LandResourceV4 {
 	}
 
 	function claimLandResource(uint256 _landTokenId) public {
-		require(isLander(_landTokenId), "Must be the owner of the land.");
+		require(
+			isLander(_landTokenId, msg.sender),
+			"Must be the owner of the land."
+		);
 
 		address gold = registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN);
 		address wood = registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN);
@@ -1592,7 +1598,7 @@ contract LandResourceV5 is LandResourceV4 {
 
 	function claimAllResource(uint256 _landTokenId) public {
 		require(
-			isLander(_landTokenId) || isBarStaker(_landTokenId),
+			isLander(_landTokenId, msg.sender) || isBarStaker(_landTokenId),
 			"Must be the owner of the land or Bar starker."
 		);
 
@@ -1604,20 +1610,19 @@ contract LandResourceV5 is LandResourceV4 {
 
 		_mineAllResource(_landTokenId, gold, wood, water, fire, soil);
 
-		if (isLander(_landTokenId)) {
+		if (isLander(_landTokenId, msg.sender)) {
 			claimLandResource(_landTokenId);
 		}
 
-		if (isBarStaker(_landTokenId)) {
-			claimBarResource(_landTokenId);
-		}
+		claimBarResource(_landTokenId);
 	}
 
-	function _calculateBarResources(
+	function _calculateResources(
+		address _to,
 		uint256 _landTokenId,
 		address _resourceToken,
 		uint256 _minedBalance
-	) public view returns (uint256) {
+	) internal view returns (uint256 landResource, uint256 barResource) {
 		address itemBar = registry.addressOf(CONTRACT_LAND_ITEM_BAR);
 		uint256 enhanceRate =
 			IItemBar(itemBar).enhanceStrengthRateOf(
@@ -1630,9 +1635,8 @@ contract LandResourceV5 is LandResourceV4 {
 				enhanceRate.add(RATE_PRECISION)
 			);
 
-		uint256 callerResource;
-		if (isLander(_landTokenId)) {
-			callerResource = callerResource.add(landBalance);
+		if (isLander(_landTokenId, _to)) {
+			landResource = landResource.add(landBalance);
 		}
 		if (enhanceRate > 0) {
 			uint256 itemBalance = _minedBalance.sub(landBalance);
@@ -1645,49 +1649,55 @@ contract LandResourceV5 is LandResourceV4 {
 					);
 				uint256 barBalance = itemBalance.mul(barRate).div(enhanceRate);
 				//TODO:: give fee to lander
-				if (
-					msg.sender ==
-					IItemBar(itemBar).getBarStaker(_landTokenId, i)
-				) {
-					callerResource = callerResource.add(barBalance);
+				if (_to == IItemBar(itemBar).getBarStaker(_landTokenId, i)) {
+					barResource = barResource.add(barBalance);
 				}
 			}
 		}
-		return callerResource;
+		return (landResource, barResource);
 	}
 
 	function availableResources(
+		address _to,
 		uint256 _landTokenId,
-		address[5] _resourceTokens
+		address[5] memory _resourceTokens
 	)
 		public
 		view
 		returns (
-			uint256,
-			uint256,
-			uint256,
-			uint256,
-			uint256
+			uint256[2],
+			uint256[2],
+			uint256[2],
+			uint256[2],
+			uint256[2]
 		)
 	{
-		uint256[5] memory availables;
+		uint256[2][5] memory availables;
 		for (uint256 i = 0; i < 5; i++) {
 			uint256 mined =
 				_calculateMinedBalance(_landTokenId, _resourceTokens[i], now);
 
-			uint256 available =
-				_calculateBarResources(_landTokenId, _resourceTokens[i], mined);
-			available = available.add(
-				land2ItemBarMinedStrength[_landTokenId][msg.sender][
-					_resourceTokens[i]
-				]
-			);
-			if (isLander(_landTokenId)) {
-				available = available.add(
-					land2ResourceMineState[_landTokenId].mintedBalance[
+			uint256[2] memory available;
+			{
+				(available[0], available[1]) =
+					_calculateResources(
+						_to,
+						_landTokenId,
+						_resourceTokens[i],
+						mined
+					);
+				available[0] = available[0].add(
+					land2ItemBarMinedStrength[_landTokenId][_to][
 						_resourceTokens[i]
 					]
 				);
+				if (isLander(_landTokenId, _to)) {
+					available[1] = available[1].add(
+						land2ResourceMineState[_landTokenId].mintedBalance[
+							_resourceTokens[i]
+						]
+					);
+				}
 			}
 			availables[i] = available;
 		}
