@@ -559,7 +559,7 @@ contract LandResourceV5 is LandResourceV4 {
 	function availableResources(
 		address _to,
 		uint256 _landTokenId,
-		address[5] memory _resourceTokens
+		address[5] _resourceTokens
 	)
 		public
 		view
@@ -576,27 +576,23 @@ contract LandResourceV5 is LandResourceV4 {
 			uint256 mined =
 				_calculateMinedBalance(_landTokenId, _resourceTokens[i], now);
 
-			uint256[2] memory available;
-			{
-				(available[0], available[1]) = _calculateResources(
-					_to,
-					_landTokenId,
-					_resourceTokens[i],
-					mined
-				);
+			uint256[2] available;
+			(available[0], available[1]) = _calculateResources(
+				_to,
+				_landTokenId,
+				_resourceTokens[i],
+				mined
+			);
+			if (isLander(_landTokenId, _to)) {
 				available[0] = available[0].add(
-					land2ItemBarMinedStrength[_landTokenId][_to][
+					land2ResourceMineState[_landTokenId].mintedBalance[
 						_resourceTokens[i]
 					]
 				);
-				if (isLander(_landTokenId, _to)) {
-					available[1] = available[1].add(
-						land2ResourceMineState[_landTokenId].mintedBalance[
-							_resourceTokens[i]
-						]
-					);
-				}
 			}
+			available[1] = available[1].add(
+				land2ItemBarMinedStrength[_landTokenId][_to][_resourceTokens[i]]
+			);
 			availables[i] = available;
 		}
 		return (
@@ -606,5 +602,39 @@ contract LandResourceV5 is LandResourceV4 {
 			availables[3],
 			availables[4]
 		);
+	}
+
+	function availableResources(
+		uint256 _landTokenId,
+		address[5] _resourceTokens
+	)
+		public
+		view
+		returns (
+			uint256,
+			uint256,
+			uint256,
+			uint256,
+			uint256
+		)
+	{
+		revert();
+	}
+
+	function getLandMinedBalance(uint256 _landTokenId, address _resourceToken)
+		public
+		view
+		returns (uint256)
+	{
+		return
+			land2ResourceMineState[_landTokenId].mintedBalance[_resourceToken];
+	}
+
+	function getBarMinedBalance(
+		uint256 _landTokenId,
+		address _to,
+		address _resourceToken
+	) public view returns (uint256) {
+		return land2ItemBarMinedStrength[_landTokenId][_to][_resourceToken];
 	}
 }
