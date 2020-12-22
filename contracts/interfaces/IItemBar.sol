@@ -16,9 +16,9 @@ interface IItemBar {
 		uint256 _index
 	) external view returns (uint256);
 
-	//0x99ea28a1
-	function getBarItemId(uint256 _landTokenId, uint256 _index)
+	//0x09d367f1
+	function getBarItem(uint256 _landTokenId, uint256 _index)
 		external
 		view
-		returns (uint256);
+		returns (address, uint256);
 }
