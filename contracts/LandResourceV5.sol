@@ -37,7 +37,6 @@ contract LandResourceV5 is
 
 	uint256 public resourceReleaseStartTime;
 
-	// TODO: remove.
 	uint256 public attenPerDay = 1;
 	uint256 public recoverAttenPerDay = 20;
 
@@ -58,7 +57,6 @@ contract LandResourceV5 is
 	// 	uint64 totalMiners;
 	// 	uint64 maxMiners;
 	// }
-	// TODO: remove.
 	struct ResourceMineState {
 		mapping(address => uint256) mintedBalance;
 		mapping(address => uint256[]) miners;
@@ -146,12 +144,6 @@ contract LandResourceV5 is
 
 	// 0x434f4e54524143545f4c414e445f4954454d5f42415200000000000000000000
 	bytes32 public constant CONTRACT_LAND_ITEM_BAR = "CONTRACT_LAND_ITEM_BAR";
-
-	struct RSState {
-		uint256 start;
-		uint256 strength;
-		uint256 minedBalance;
-	}
 
 	// rate precision
 	uint128 public constant RATE_PRECISION = 10**8;
@@ -638,10 +630,10 @@ contract LandResourceV5 is
 		(uint256 strength, uint256 enhancedStrength) =
 			_updateStrength(_tokenId, landId, resource, true);
 
-		// if (land2ResourceMineState[landId].totalMiners == 0) {
-		// 	land2ResourceMineState[landId].totalMinerStrength[resource] = 0;
-		// 	land2BarEnhancedStrength[landId][resource] = 0;
-		// }
+		if (land2ResourceMineState[landId].totalMiners == 0) {
+			land2ResourceMineState[landId].totalMinerStrength[resource] = 0;
+			land2BarEnhancedStrength[landId][resource] = 0;
+		}
 
 		delete miner2Index[_tokenId];
 
@@ -649,9 +641,6 @@ contract LandResourceV5 is
 	}
 
 	function updateMinerStrengthWhenStop(uint256 _apostleTokenId) public auth {
-		if (miner2Index[_apostleTokenId].landId == 0) {
-			return;
-		}
 		(uint256 landId, uint256 strength, uint256 enhancedStrength) =
 			_updateMinerStrength(_apostleTokenId, true);
 		// _isStop == true - minus strength
@@ -665,9 +654,6 @@ contract LandResourceV5 is
 	}
 
 	function updateMinerStrengthWhenStart(uint256 _apostleTokenId) public auth {
-		if (miner2Index[_apostleTokenId].landId == 0) {
-			return;
-		}
 		(uint256 landId, uint256 strength, uint256 enhancedStrength) =
 			_updateMinerStrength(_apostleTokenId, false);
 		// _isStop == true - minus strength
@@ -699,6 +685,13 @@ contract LandResourceV5 is
 			_updateStrength(_apostleTokenId, landId, resource, _isStop);
 		return (landId, strength, enhancedStrength);
 	}
+
+	// function beforeUpdateMinerStrength(uint256 _apostleId) public auth {
+	// 	mine(_landId);
+	// }
+
+	// function afterUpdateMinerStrength(uint256 _apostleId) public auth {
+	// }
 
 	// can only be called by ItemBar
 	// _isStop == true - minus strength
