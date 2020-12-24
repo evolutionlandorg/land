@@ -635,6 +635,11 @@ interface IItemBar {
 		external
 		view
 		returns (address, uint256);
+
+	function getTokenIdByItem(address _item, uint256 _itemId)
+		external	
+		view
+		returns (address, uint256);
 }
 
 
@@ -796,6 +801,9 @@ contract LandResourceV5 is
 
 	// 0x434f4e54524143545f4c414e445f4954454d5f42415200000000000000000000
 	bytes32 public constant CONTRACT_LAND_ITEM_BAR = "CONTRACT_LAND_ITEM_BAR";
+
+	//0x4655524e4143455f4954454d5f4d494e455f4645450000000000000000000000
+	bytes32 public constant FURNACE_ITEM_MINE_FEE = "FURNACE_ITEM_MINE_FEE";
 
 	// rate precision
 	uint128 public constant RATE_PRECISION = 10**8;
@@ -1079,9 +1087,16 @@ contract LandResourceV5 is
 								_landId,
 								i
 							);
+
 						uint256 barBalance =
 							itemBalance.mul(barRate).div(enhanceRate);
 						//TODO:: give fee to lander
+						uint256 fee =
+							barBalance
+								.mul(registry.uintOf(FURNACE_ITEM_MINE_FEE))
+								.div(RATE_PRECISION);
+						barBalance = barBalance.sub(fee);
+						landBalance = landBalance.add(fee);
 						land2ItemMinedBalance[itemToken][itemId][
 							_resource
 						] = getItemMinedBalance(itemToken, itemId, _resource)
@@ -1241,7 +1256,7 @@ contract LandResourceV5 is
 		}
 	}
 
-	function batchClaimAllResource(uint256[] _landIds) public {
+	function batchClaimLandResource(uint256[] _landIds) public {
 		uint256 length = _landIds.length;
 
 		for (uint256 i = 0; i < length; i++) {
@@ -1402,7 +1417,17 @@ contract LandResourceV5 is
 	}
 
 	function claimItemResource(address _itemToken, uint256 _itemId) public {
-		require(ERC721(_itemToken).ownerOf(_itemId) == msg.sender, "Land: ONLY_ITEM_ONWER");
+		(address staker, uint256 landId) =
+			itembar.getTokenIdByItem(_itemToken, _itemId);
+		if (staker == address(0) && landId == 0) {
+			require(
+				ERC721(_itemToken).ownerOf(_itemId) == msg.sender,
+				"Land: ONLY_ITEM_ONWER"
+			);
+		} else {
+			require(staker == msg.sender, "Land: ONLY_ITEM_STAKER");
+			mine(landId);
+		}
 
 		uint256 goldBalance = _claimItemResource(_itemToken, _itemId, gold);
 		uint256 woodBalance = _claimItemResource(_itemToken, _itemId, wood);
@@ -1462,22 +1487,27 @@ contract LandResourceV5 is
 		uint256 _landId,
 		address _resource,
 		uint256 _minedBalance
-	) internal view returns (uint256 landResource, uint256 barResource) {
+	) internal view returns (uint256 landBalance, uint256 barResource) {
 		uint256 enhanceRate = itembar.enhanceStrengthRateOf(_resource, _landId);
 		// V5 yeild distribution
-		uint256 landBalance =
-			_minedBalance.mul(RATE_PRECISION).div(
-				enhanceRate.add(RATE_PRECISION)
-			);
+		landBalance = _minedBalance.mul(RATE_PRECISION).div(
+			enhanceRate.add(RATE_PRECISION)
+		);
 
-		landResource = landBalance;
 		if (enhanceRate > 0) {
 			uint256 itemBalance = _minedBalance.sub(landBalance);
 			for (uint256 i = 0; i < itembar.maxAmount(); i++) {
 				uint256 barRate =
 					itembar.enhanceStrengthRateByIndex(_resource, _landId, i);
+
 				uint256 barBalance = itemBalance.mul(barRate).div(enhanceRate);
 				//TODO:: give fee to lander
+				uint256 fee =
+					barBalance.mul(registry.uintOf(FURNACE_ITEM_MINE_FEE)).div(
+						RATE_PRECISION
+					);
+				barBalance = barBalance.sub(fee);
+				landBalance = landBalance.add(fee);
 				(address itemToken, uint256 itemId) =
 					itembar.getBarItem(_landId, i);
 				if (_itemId == itemId && _itemToken == itemToken) {
@@ -1488,19 +1518,12 @@ contract LandResourceV5 is
 		return;
 	}
 
-	function availableLandResources(uint256 _landId, address[5] _resources)
-		public
-		view
-		returns (
-			uint256,
-			uint256,
-			uint256,
-			uint256,
-			uint256
-		)
-	{
-		uint256[5] memory availables;
-		for (uint256 i = 0; i < 5; i++) {
+	function availableLandResources(
+		uint256 _landId,
+		address[] memory _resources
+	) public view returns (uint256[] memory) {
+		uint256[] memory availables = new uint256[](_resources.length);
+		for (uint256 i = 0; i < _resources.length; i++) {
 			uint256 mined = _calculateMinedBalance(_landId, _resources[i], now);
 
 			(uint256 available, ) =
@@ -1511,52 +1534,42 @@ contract LandResourceV5 is
 					_resources[i],
 					mined
 				);
+			available = available.add(
+				getLandMinedBalance(_landId, _resources[i])
+			);
 			availables[i] = available;
 		}
-		return (
-			availables[0],
-			availables[1],
-			availables[2],
-			availables[3],
-			availables[4]
-		);
+		return availables;
 	}
 
 	function availableItemResources(
 		address _itemToken,
 		uint256 _itemId,
-		uint256 _landId,
-		address[5] _resources
-	)
-		public
-		view
-		returns (
-			uint256,
-			uint256,
-			uint256,
-			uint256,
-			uint256
-		)
-	{
-		uint256[5] memory availables;
-		for (uint256 i = 0; i < 5; i++) {
-			uint256 mined = _calculateMinedBalance(_landId, _resources[i], now);
-			(, uint256 available) =
-				_calculateResources(
-					_itemToken,
-					_itemId,
-					_landId,
-					_resources[i],
-					mined
-				);
+		address[] memory _resources
+	) public view returns (uint256[] memory) {
+		uint256[] memory availables = new uint256[](_resources.length);
+		for (uint256 i = 0; i < _resources.length; i++) {
+			(address staker, uint256 landId) =
+				itembar.getTokenIdByItem(_itemToken, _itemId);
+			uint256 available = 0;
+			if (staker != address(0) && landId != 0) {
+				uint256 mined =
+					_calculateMinedBalance(landId, _resources[i], now);
+				(, uint256 availableItem) =
+					_calculateResources(
+						_itemToken,
+						_itemId,
+						landId,
+						_resources[i],
+						mined
+					);
+				available = available.add(availableItem);
+			}
+			available = available.add(
+				getItemMinedBalance(_itemToken, _itemId, _resources[i])
+			);
 			availables[i] = available;
 		}
-		return (
-			availables[0],
-			availables[1],
-			availables[2],
-			availables[3],
-			availables[4]
-		);
+		return availables;
 	}
 }

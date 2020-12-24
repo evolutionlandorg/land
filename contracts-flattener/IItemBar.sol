@@ -23,4 +23,9 @@ interface IItemBar {
 		external
 		view
 		returns (address, uint256);
+
+	function getTokenIdByItem(address _item, uint256 _itemId)
+		external	
+		view
+		returns (address, uint256);
 }
