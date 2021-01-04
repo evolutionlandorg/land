@@ -1090,7 +1090,6 @@ contract LandResourceV5 is
 
 						uint256 barBalance =
 							itemBalance.mul(barRate).div(enhanceRate);
-						//TODO:: give fee to lander
 						uint256 fee =
 							barBalance
 								.mul(registry.uintOf(FURNACE_ITEM_MINE_FEE))
@@ -1501,7 +1500,6 @@ contract LandResourceV5 is
 					itembar.enhanceStrengthRateByIndex(_resource, _landId, i);
 
 				uint256 barBalance = itemBalance.mul(barRate).div(enhanceRate);
-				//TODO:: give fee to lander
 				uint256 fee =
 					barBalance.mul(registry.uintOf(FURNACE_ITEM_MINE_FEE)).div(
 						RATE_PRECISION
