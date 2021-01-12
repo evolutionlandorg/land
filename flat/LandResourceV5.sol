@@ -634,12 +634,13 @@ interface IItemBar {
 	function getBarItem(uint256 _landTokenId, uint256 _index)
 		external
 		view
-		returns (address, uint256);
+		returns (address, uint256, address);
 
-	function getTokenIdByItem(address _item, uint256 _itemId)
+	//0xc46f18f7
+	function getStatusByItem(address _item, uint256 _itemId)
 		external	
 		view
-		returns (address, uint256);
+		returns (address, uint256, address, uint256);
 }
 
 
@@ -770,8 +771,23 @@ contract LandResourceV5 is
 		uint256 enhancedStrengh
 	);
 	event StopBarMining(uint256 barIndex, uint256 landId, address resource);
+	event UpdateBarMiningStrength(
+		uint256 index,
+		uint256 landId,
+		address resource,
+		uint256 enhancedStrength
+	);
+	event SettleBar(
+		uint256 index,
+		uint256 landId,
+		address resource,
+		address itemToken,
+		uint256 itemId,
+		uint256 barMinedBalance
+	);
 	event ItemResourceClaimed(
 		address owner,
+		address itemToken,
 		uint256 itemTokenId,
 		uint256 goldBalance,
 		uint256 woodBalance,
@@ -833,48 +849,40 @@ contract LandResourceV5 is
 		view
 		returns (uint256 currentSpeed)
 	{
-		require(_time >= resourceReleaseStartTime, "Should after release time");
-		require(
-			_time >= land2ResourceMineState[_tokenId].lastUpdateTime,
-			"Should after release last update time"
-		);
+        require(_time >= resourceReleaseStartTime, "Should after release time");
+        require(_time >= land2ResourceMineState[_tokenId].lastUpdateTime, "Should after release last update time");
 
-		// after 10000 days from start
-		// the resource release speed decreases to 0
-		if (TOTAL_SECONDS < _time - resourceReleaseStartTime) {
-			return 0;
-		}
+        // after 10000 days from start
+        // the resource release speed decreases to 0
+        if (TOTAL_SECONDS < _time - resourceReleaseStartTime)
+        {
+            return 0;
+        }
 
-		// max amount of speed unit of _tokenId for now
-		// suppose that speed_uint = 1 in this function
-		uint256 availableSpeedInSeconds =
-			TOTAL_SECONDS.sub(_time - resourceReleaseStartTime);
-		// time from last update
-		uint256 timeBetween =
-			_time - land2ResourceMineState[_tokenId].lastUpdateTime;
+        // max amount of speed unit of _tokenId for now
+        // suppose that speed_uint = 1 in this function
+        uint256 availableSpeedInSeconds = TOTAL_SECONDS.sub(_time - resourceReleaseStartTime);
+        // time from last update
+        uint256 timeBetween = _time - land2ResourceMineState[_tokenId].lastUpdateTime;
 
-		// the recover speed is 20/10000, 20 times.
-		// recoveryRate overall from lasUpdateTime til now + amount of speed uint at lastUpdateTime
-		uint256 nextSpeedInSeconds =
-			land2ResourceMineState[_tokenId].lastUpdateSpeedInSeconds +
-				timeBetween *
-				recoverAttenPerDay;
-		// destroyRate overall from lasUpdateTime til now amount of speed uint at lastUpdateTime
-		uint256 destroyedSpeedInSeconds =
-			timeBetween *
-				land2ResourceMineState[_tokenId].lastDestoryAttenInSeconds;
+        // the recover speed is 20/10000, 20 times.
+        // recoveryRate overall from lasUpdateTime til now + amount of speed uint at lastUpdateTime
+        uint256 nextSpeedInSeconds = land2ResourceMineState[_tokenId].lastUpdateSpeedInSeconds + timeBetween * recoverAttenPerDay;
+        // destroyRate overall from lasUpdateTime til now amount of speed uint at lastUpdateTime
+        uint256 destroyedSpeedInSeconds = timeBetween * land2ResourceMineState[_tokenId].lastDestoryAttenInSeconds;
 
-		if (nextSpeedInSeconds < destroyedSpeedInSeconds) {
-			nextSpeedInSeconds = 0;
-		} else {
-			nextSpeedInSeconds = nextSpeedInSeconds - destroyedSpeedInSeconds;
-		}
+        if (nextSpeedInSeconds < destroyedSpeedInSeconds)
+        {
+            nextSpeedInSeconds = 0;
+        } else {
+            nextSpeedInSeconds = nextSpeedInSeconds - destroyedSpeedInSeconds;
+        }
 
-		if (nextSpeedInSeconds > availableSpeedInSeconds) {
-			nextSpeedInSeconds = availableSpeedInSeconds;
-		}
+        if (nextSpeedInSeconds > availableSpeedInSeconds) {
+            nextSpeedInSeconds = availableSpeedInSeconds;
+        }
 
-		return nextSpeedInSeconds;
+        return nextSpeedInSeconds;
 	}
 
 	function getReleaseSpeed(
@@ -993,6 +1001,7 @@ contract LandResourceV5 is
 			_landTokenId,
 			now
 		);
+
 		land2ResourceMineState[_landTokenId].lastUpdateTime = uint128(now);
 	}
 
@@ -1182,6 +1191,9 @@ contract LandResourceV5 is
 			indexInResource: uint64(_index)
 		});
 
+		//v5 add
+		_updateBarsStrength(_landTokenId, _resource);
+
 		emit StartMining(_tokenId, _landTokenId, _resource, strength);
 	}
 
@@ -1293,6 +1305,9 @@ contract LandResourceV5 is
 		}
 
 		delete miner2Index[_tokenId];
+
+		//v5 add
+		_updateBarsStrength(landTokenId, resource);
 
 		emit StopMining(_tokenId, landTokenId, resource, strength);
 	}
@@ -1410,6 +1425,10 @@ contract LandResourceV5 is
 			] += strength;
 		}
 
+
+		//v5 add
+		_updateBarsStrength(landTokenId, resource);
+
 		return (landTokenId, strength);
 	}
 
@@ -1476,6 +1495,20 @@ contract LandResourceV5 is
 		return land2Bar[_landId][_resource][_index].strength;
 	}
 
+	function getBarsMiningStrength(uint256 _landId, address _resource)
+		public
+		view
+		returns (uint256 barsMiningStrength)
+	{
+		uint256 maxAmount =
+			IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR)).maxAmount();
+		for (uint256 i = 0; i < maxAmount; i++) {
+			barsMiningStrength = barsMiningStrength.add(
+				getBarMiningStrength(_landId, _resource, i)
+			);
+		}
+	}
+
 	function getBarLastUpdateTime(
 		uint256 _landId,
 		address _resource,
@@ -1489,14 +1522,10 @@ contract LandResourceV5 is
 		view
 		returns (uint256)
 	{
-		uint256 barsMiningStrength = 0;
-		uint256 maxAmount =
-			IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR)).maxAmount();
-		for (uint256 i = 0; i < maxAmount; i++) {
-			barsMiningStrength.add(getBarMiningStrength(_landId, _resource, i));
-		}
 		return
-			getLandMiningStrength(_landId, _resource).add(barsMiningStrength);
+			getLandMiningStrength(_landId, _resource).add(
+				getBarsMiningStrength(_landId, _resource)
+			);
 	}
 
 	function getMinerOnLand(
@@ -1561,6 +1590,51 @@ contract LandResourceV5 is
 		_stopBarMinig(_index, _landId, _resource);
 	}
 
+	function _updateBarsStrength(uint256 _landId, address _resource) internal {
+		IItemBar itembar = IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR));
+		uint256 maxAmount = itembar.maxAmount();
+		for (uint256 i = 0; i < maxAmount; i++) {
+			(address itemToken, uint256 itemId, address resource) =
+				itembar.getBarItem(_landId, i);
+			if (
+				itemToken != address(0) && itemId != 0 && resource == _resource
+			) {
+				_updateBarStrength(i, _landId, _resource);
+			}
+		}
+	}
+
+	function _updateBarStrength(
+		uint256 _index,
+		uint256 _landId,
+		address _resource
+	) internal {
+		require(
+			now > resourceReleaseStartTime &&
+				now < (resourceReleaseStartTime + TOTAL_SECONDS),
+			"Land: INVALID_TIME"
+		);
+		uint256 strength = getLandMiningStrength(_landId, _resource);
+		settleBar(_index, _landId, _resource);
+		uint256 enhancedStrength =
+			_enhancedStrengthRateByIndex(
+				strength,
+				_landId,
+				_resource,
+				_index
+			);
+		land2Bar[_landId][_resource][_index] = Bar({
+			strength: enhancedStrength,
+			lastUpdateTime: now
+		});
+		emit UpdateBarMiningStrength(
+			_index,
+			_landId,
+			_resource,
+			enhancedStrength
+		);
+	}
+
 	function _startBarMining(
 		uint256 _index,
 		uint256 _landId,
@@ -1571,7 +1645,7 @@ contract LandResourceV5 is
 				now < (resourceReleaseStartTime + TOTAL_SECONDS),
 			"Land: INVALID_TIME"
 		);
-		uint256 strength = getLandMinedBalance(_landId, _resource);
+		uint256 strength = getLandMiningStrength(_landId, _resource);
 		uint256 enhancedStrength =
 			_enhancedStrengthRateByIndex(strength, _landId, _resource, _index);
 		land2Bar[_landId][_resource][_index] = Bar({
@@ -1581,25 +1655,42 @@ contract LandResourceV5 is
 		emit StartBarMining(_index, _landId, _resource, enhancedStrength);
 	}
 
+	function settleBar(
+		uint256 _index,
+		uint256 _landId,
+		address _resource
+	) public {
+		IItemBar itembar = IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR));
+		uint256 barMinedBalance =
+			_calculateBarMinedBalance(_index, _landId, _resource, now);
+		(address itemToken, uint256 itemId, address resource) =
+			IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR)).getBarItem(
+				_landId,
+				_index
+			);
+		require(_resource == resource, "Land: INVALID_SETTLE_RESOUCE");
+		land2ItemMinedBalance[itemToken][itemId][
+			_resource
+		] = getItemMinedBalance(itemToken, itemId, _resource).add(
+			barMinedBalance
+		);
+		emit SettleBar(
+			_index,
+			_landId,
+			_resource,
+			itemToken,
+			itemId,
+			barMinedBalance
+		);
+	}
+
 	function _stopBarMinig(
 		uint256 _index,
 		uint256 _landId,
 		address _resource
 	) internal {
 		require(now > resourceReleaseStartTime, "Land: INVALID_TIME");
-		IItemBar itembar = IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR));
-		uint256 barMinedBalance =
-			_calculateBarMinedBalance(_index, _landId, _resource, now);
-		(address itemToken, uint256 itemId) =
-			IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR)).getBarItem(
-				_landId,
-				_index
-			);
-		land2ItemMinedBalance[itemToken][itemId][
-			_resource
-		] = getItemMinedBalance(itemToken, itemId, _resource).add(
-			barMinedBalance
-		);
+		settleBar(_index, _landId, _resource);
 		delete land2Bar[_landId][_resource][_index];
 		emit StopBarMining(_index, _landId, _resource);
 	}
@@ -1619,9 +1710,12 @@ contract LandResourceV5 is
 		}
 		require(currentTime >= lastUpdateTime, "Land: INVALID_TIME");
 		uint256 minedBalance;
+		// TODO
+		// uint256 minableBalance;
 		// neglecting max mined balance because of time is not sync
 		if (lastUpdateTime >= (resourceReleaseStartTime + TOTAL_SECONDS)) {
 			minedBalance = 0;
+			// minableBalance = 0;
 		} else {
 			minedBalance = _getBarMaxMineBalance(
 				_landId,
@@ -1630,85 +1724,116 @@ contract LandResourceV5 is
 				currentTime,
 				lastUpdateTime
 			);
+			// minableBalance = _getBarMinableBalance(
+			// 	_landId,
+			// 	_resource,
+			// 	currentTime,
+			// 	lastUpdateTime
+			// );
 		}
+
+		// if (minedBalance > minableBalance) {
+		// 	minedBalance = minableBalance;
+		// }
+
 		return minedBalance;
 	}
 
-	// function _claimItemResource(
-	// 	address _itemToken,
-	// 	uint256 _itemId,
-	// 	address _resource
-	// ) internal returns (uint256) {
-	// 	uint256 balance = getItemMinedBalance(_itemToken, _itemId, _resource);
-	// 	if (balance > 0) {
-	// 		IMintableERC20(_resource).mint(msg.sender, balance);
-	// 		land2ItemMinedBalance[_itemToken][_itemId][_resource] = 0;
-	// 		return balance;
-	// 	} else {
-	// 		return 0;
-	// 	}
-	// }
+	function _claimItemResource(
+		address _itemToken,
+		uint256 _itemId,
+		address _resource
+	) internal returns (uint256) {
+		uint256 balance = getItemMinedBalance(_itemToken, _itemId, _resource);
+		if (balance > 0) {
+			IMintableERC20(_resource).mint(msg.sender, balance);
+			land2ItemMinedBalance[_itemToken][_itemId][_resource] = 0;
+			return balance;
+		} else {
+			return 0;
+		}
+	}
 
-	// function claimItemResource(address _itemToken, uint256 _itemId) public {
-	// 	IItemBar itembar = IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR));
-	// 	(address staker, uint256 landId) =
-	// 		itembar.getTokenIdByItem(_itemToken, _itemId);
-	// 	if (staker == address(0) && landId == 0) {
-	// 		require(
-	// 			ERC721(_itemToken).ownerOf(_itemId) == msg.sender,
-	// 			"Land: ONLY_ITEM_ONWER"
-	// 		);
-	// 	} else {
-	// 		require(staker == msg.sender, "Land: ONLY_ITEM_STAKER");
-	// 		mine(landId);
-	// 	}
+	function claimItemResource(address _itemToken, uint256 _itemId) public {
+		IItemBar itembar = IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR));
+		(address staker, uint256 landId, address resource, uint256 index) =
+			itembar.getStatusByItem(_itemToken, _itemId);
+		if (staker == address(0) && landId == 0) {
+			require(
+				ERC721(_itemToken).ownerOf(_itemId) == msg.sender,
+				"Land: ONLY_ITEM_ONWER"
+			);
+		} else {
+			require(staker == msg.sender, "Land: ONLY_ITEM_STAKER");
+			settleBar(index, landId, resource);
+		}
 
-	// 	uint256 goldBalance = _claimItemResource(_itemToken, _itemId, registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN));
-	// 	uint256 woodBalance = _claimItemResource(_itemToken, _itemId, registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN));
-	// 	uint256 waterBalance = _claimItemResource(_itemToken, _itemId, registry.addressOf(CONTRACT_WATER_ERC20_TOKEN));
-	// 	uint256 fireBalance = _claimItemResource(_itemToken, _itemId, registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN));
-	// 	uint256 soilBalance = _claimItemResource(_itemToken, _itemId, registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN));
+		uint256 goldBalance =
+			_claimItemResource(
+				_itemToken,
+				_itemId,
+				registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN)
+			);
+		uint256 woodBalance =
+			_claimItemResource(
+				_itemToken,
+				_itemId,
+				registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN)
+			);
+		uint256 waterBalance =
+			_claimItemResource(
+				_itemToken,
+				_itemId,
+				registry.addressOf(CONTRACT_WATER_ERC20_TOKEN)
+			);
+		uint256 fireBalance =
+			_claimItemResource(
+				_itemToken,
+				_itemId,
+				registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN)
+			);
+		uint256 soilBalance =
+			_claimItemResource(
+				_itemToken,
+				_itemId,
+				registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN)
+			);
 
-	// 	emit ItemResourceClaimed(
-	// 		msg.sender,
-	// 		_itemId,
-	// 		goldBalance,
-	// 		woodBalance,
-	// 		waterBalance,
-	// 		fireBalance,
-	// 		soilBalance
-	// 	);
-	// }
+		emit ItemResourceClaimed(
+			msg.sender,
+			_itemToken,
+			_itemId,
+			goldBalance,
+			woodBalance,
+			waterBalance,
+			fireBalance,
+			soilBalance
+		);
+	}
 
-	// function availableItemResources(
-	// 	address _itemToken,
-	// 	uint256 _itemId,
-	// 	address[] memory _resources
-	// ) public view returns (uint256[] memory) {
-	// 	IItemBar itembar = IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR));
-	// 	uint256[] memory availables = new uint256[](_resources.length);
-	// 	for (uint256 i = 0; i < _resources.length; i++) {
-	// 		(address staker, uint256 landId) =
-	// 			itembar.getTokenIdByItem(_itemToken, _itemId);
-	// 		uint256 available = 0;
-	// 		if (staker != address(0) && landId != 0) {
-	// 			uint256 mined =
-	// 				_calculateMinedBalance(landId, _resources[i], now);
-	// 			(, uint256 availableItem) =
-	// 				_calculateResources(
-	// 					_itemToken,
-	// 					_itemId,
-	// 					landId,
-	// 					_resources[i],
-	// 					mined
-	// 				);
-	// 			available = available.add(availableItem);
-	// 		}
-	// 		available = available.add(
-	// 			getItemMinedBalance(_itemToken, _itemId, _resources[i])
-	// 		);
-	// 		availables[i] = available;
-	// 	}
-	// 	return availables;
-	// }
+	function availableItemResources(
+		address _itemToken,
+		uint256 _itemId,
+		address[] memory _resources
+	) public view returns (uint256[] memory) {
+		IItemBar itembar = IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR));
+		uint256[] memory availables = new uint256[](_resources.length);
+		for (uint256 i = 0; i < _resources.length; i++) {
+			(address staker, uint256 landId, , uint256 index) =
+				itembar.getStatusByItem(_itemToken, _itemId);
+			uint256 available = 0;
+			if (staker != address(0) && landId != 0) {
+				available = _calculateBarMinedBalance(
+					index,
+					landId,
+					_resources[i],
+					now
+				);
+			}
+			availables[i] = available.add(
+				getItemMinedBalance(_itemToken, _itemId, _resources[i])
+			);
+		}
+		return availables;
+	}
 }

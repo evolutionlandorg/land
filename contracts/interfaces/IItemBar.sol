@@ -20,10 +20,11 @@ interface IItemBar {
 	function getBarItem(uint256 _landTokenId, uint256 _index)
 		external
 		view
-		returns (address, uint256);
+		returns (address, uint256, address);
 
-	function getTokenIdByItem(address _item, uint256 _itemId)
+	//0xc46f18f7
+	function getStatusByItem(address _item, uint256 _itemId)
 		external	
 		view
-		returns (address, uint256);
+		returns (address, uint256, address, uint256);
 }
