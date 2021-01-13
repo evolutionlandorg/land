@@ -54,34 +54,6 @@ library SafeMath {
 }
 
 
-// Dependency file: openzeppelin-solidity/contracts/math/Math.sol
-
-// pragma solidity ^0.4.24;
-
-
-/**
- * @title Math
- * @dev Assorted math operations
- */
-library Math {
-  function max64(uint64 _a, uint64 _b) internal pure returns (uint64) {
-    return _a >= _b ? _a : _b;
-  }
-
-  function min64(uint64 _a, uint64 _b) internal pure returns (uint64) {
-    return _a < _b ? _a : _b;
-  }
-
-  function max256(uint256 _a, uint256 _b) internal pure returns (uint256) {
-    return _a >= _b ? _a : _b;
-  }
-
-  function min256(uint256 _a, uint256 _b) internal pure returns (uint256) {
-    return _a < _b ? _a : _b;
-  }
-}
-
-
 // Dependency file: openzeppelin-solidity/contracts/introspection/ERC165.sol
 
 // pragma solidity ^0.4.24;
@@ -608,38 +580,41 @@ contract ILandBase {
 
     function setFlagMask(uint _landTokenId, uint256 _newFlagMask) public;
 
+    function resourceToken2RateAttrId(address _resourceToken) external view returns (uint256);
 }
 
-// Dependency file: contracts/interfaces/IItemBar.sol
+
+// Dependency file: contracts/interfaces/IMetaDataTeller.sol
 
 // pragma solidity ^0.4.24;
 
-interface IItemBar {
-	//0x33372e46
-	function enhanceStrengthRateOf(
-		address _resourceToken,
-		uint256 _tokenId
-	) external view returns (uint256);
+interface IMetaDataTeller {
+	function addTokenMeta(
+		address _token,
+		uint16 _grade,
+		uint112 _strengthRate
+	) external;
 
-	function maxAmount() external view returns (uint256);
+	function getObjClassExt(address _token, uint256 _id) external view returns (uint16 objClassExt);
 
-	//0x993ac21a
-	function enhanceStrengthRateByIndex(
-		address _resourceToken,
-		uint256 _landTokenId,
+	//0xf666196d
+	function getMetaData(address _token, uint256 _id)
+		external
+		view
+		returns (uint16, uint16, uint16);
+
+    //0x7999a5cf
+	function getPrefer(address _token) external view returns (uint256);
+
+	//0x33281815
+	function getRate(
+		address _token,
+		uint256 _id,
 		uint256 _index
 	) external view returns (uint256);
 
-	//0x09d367f1
-	function getBarItem(uint256 _landTokenId, uint256 _index)
-		external
-		view
-		returns (address, uint256, address);
-
-	function getTokenIdByItem(address _item, uint256 _itemId)
-		external	
-		view
-		returns (address, uint256);
+	//0xf8350ed0
+	function isAllowed(address _token, uint256 _id) external view returns (bool);
 }
 
 
@@ -658,7 +633,6 @@ contract LandSettingIds is SettingIds {
 pragma solidity ^0.4.24;
 
 // import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-// import "openzeppelin-solidity/contracts/math/Math.sol";
 // import "openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
 // import "openzeppelin-solidity/contracts/introspection/SupportsInterfaceWithLookup.sol";
 // import "@evolutionland/common/contracts/interfaces/IMintableERC20.sol";
@@ -670,7 +644,7 @@ pragma solidity ^0.4.24;
 // import "@evolutionland/common/contracts/interfaces/IActivity.sol";
 // import "@evolutionland/common/contracts/interfaces/IMinerObject.sol";
 // import "contracts/interfaces/ILandBase.sol";
-// import "contracts/interfaces/IItemBar.sol";
+// import "contracts/interfaces/IMetaDataTeller.sol";
 // import "contracts/LandSettingIds.sol";
 
 contract LandResourceV5 is
@@ -680,7 +654,6 @@ contract LandResourceV5 is
 	LandSettingIds
 {
 	using SafeMath for *;
-	using Math for *;
 
 	// For every seconds, the speed will decrease by current speed multiplying (DENOMINATOR_in_seconds - seconds) / DENOMINATOR_in_seconds
 	// resource will decrease 1/10000 every day.
@@ -789,11 +762,37 @@ contract LandResourceV5 is
 		uint256 soilBalance
 	);
 
+	// land item bar
+	event Equip(
+		uint256 indexed tokenId,
+		address resource,
+		uint256 index,
+		address staker,
+		address token,
+		uint256 id
+	);
+	event Unequip(
+		uint256 indexed tokenId,
+		address resource,
+		uint256 index,
+		address staker,
+		address token,
+		uint256 id
+	);
+
 	// 0x434f4e54524143545f4c414e445f4954454d5f42415200000000000000000000
 	bytes32 public constant CONTRACT_LAND_ITEM_BAR = "CONTRACT_LAND_ITEM_BAR";
 
 	//0x4655524e4143455f4954454d5f4d494e455f4645450000000000000000000000
 	bytes32 public constant FURNACE_ITEM_MINE_FEE = "FURNACE_ITEM_MINE_FEE";
+
+	// 0x434f4e54524143545f4d455441444154415f54454c4c45520000000000000000
+	bytes32 public constant CONTRACT_METADATA_TELLER =
+		"CONTRACT_METADATA_TELLER";
+
+	// 0x55494e545f4954454d4241525f50524f544543545f504552494f440000000000
+	bytes32 public constant UINT_ITEMBAR_PROTECT_PERIOD =
+		"UINT_ITEMBAR_PROTECT_PERIOD";
 
 	// rate precision
 	uint128 public constant RATE_PRECISION = 10**8;
@@ -806,17 +805,36 @@ contract LandResourceV5 is
 	mapping(uint256 => mapping(address => mapping(uint256 => uint256)))
 		public land2BarRate;
 
+	// land bar
+	struct Bar {
+		address staker;
+		address token;
+		uint256 id;
+		address resource;
+	}
+
+	// bar status
+	struct Status {
+		address staker;
+		uint256 tokenId;
+		uint256 index;
+	}
+
+	uint256 public maxAmount;
+	mapping(uint256 => mapping(uint256 => Bar)) public tokenId2Bars;
+	mapping(address => mapping(uint256 => Status)) public itemId2Index;
+	mapping(address => mapping(uint256 => uint256)) public protectPeriod;
+
 	ERC721 public ownership;
 	IInterstellarEncoder public interstellarEncoder;
 	ITokenUse public tokenuse;
-	IItemBar public itembar;
 	ILandBase public landbase;
+	IMetaDataTeller public teller;
 	address public gold;
 	address public wood;
 	address public water;
 	address public fire;
 	address public soil;
-	uint256 public barFee;
 	// v5 add end
 
 	/*
@@ -830,8 +848,7 @@ contract LandResourceV5 is
 
 	function initializeContract(
 		address _registry,
-		uint256 _resourceReleaseStartTime,
-		uint256 _maxMiners
+		uint256 _resourceReleaseStartTime
 	) public singletonLockCall {
 		// Ownable constructor
 		owner = msg.sender;
@@ -850,15 +867,14 @@ contract LandResourceV5 is
 			registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
 		);
 		tokenuse = ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE));
-		itembar = IItemBar(registry.addressOf(CONTRACT_LAND_ITEM_BAR));
 		landbase = ILandBase(registry.addressOf(CONTRACT_LAND_BASE));
+		teller = IMetaDataTeller(registry.addressOf(CONTRACT_METADATA_TELLER));
 
 		gold = registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN);
 		wood = registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN);
 		water = registry.addressOf(CONTRACT_WATER_ERC20_TOKEN);
 		fire = registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN);
 		soil = registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN);
-		barFee = registry.uintOf(FURNACE_ITEM_MINE_FEE);
 	}
 
 	// get amount of speed uint at this moment
@@ -963,34 +979,13 @@ contract LandResourceV5 is
 				.div(1 days);
 	}
 
-	function _getBarMaxMineBalance(
-		uint256 _tokenId,
-		address _resource,
-		uint256 _index,
-		uint256 _currentTime,
-		uint256 _lastUpdateTime
-	) internal view returns (uint256) {
-		// totalMinerStrength is in wei
-		return
-			getBarMiningStrength(_tokenId, _resource, _index)
-				.mul(_currentTime - _lastUpdateTime)
-				.div(1 days);
-	}
-
 	function setMaxMiners(uint256 _maxMiners) public auth {
 		require(_maxMiners > maxMiners, "Land: INVALID_MAXMINERS");
 		maxMiners = _maxMiners;
 	}
 
 	function mine(uint256 _landTokenId) public {
-		_mineAllResource(
-			_landTokenId,
-			gold,
-			wood,
-			water,
-			fire,
-			soil	
-		);
+		_mineAllResource(_landTokenId, gold, wood, water, fire, soil);
 	}
 
 	function _mineAllResource(
@@ -1039,9 +1034,9 @@ contract LandResourceV5 is
 	) internal returns (uint256) {
 		uint256 landBalance =
 			minedBalance.mul(RATE_PRECISION).div(barsRate.add(RATE_PRECISION));
-		for (uint256 i = 0; i < itembar.maxAmount(); i++) {
+		for (uint256 i = 0; i < maxAmount; i++) {
 			(address itemToken, uint256 itemId, address resouce) =
-				itembar.getBarItem(_landId, i);
+				getBarItem(_landId, i);
 			if (itemToken != address(0) && resouce == _resource) {
 				uint256 barBalance =
 					minedBalance
@@ -1061,11 +1056,11 @@ contract LandResourceV5 is
 
 	function _payFee(uint256 barBalance, uint256 landBalance)
 		internal
-		view	
+		view
 		returns (uint256, uint256)
 	{
 		uint256 fee =
-			barBalance.mul(barFee).div(
+			barBalance.mul(registry.uintOf(FURNACE_ITEM_MINE_FEE)).div(
 				RATE_PRECISION
 			);
 		barBalance = barBalance.sub(fee);
@@ -1216,10 +1211,7 @@ contract LandResourceV5 is
 
 		// require the permission from land owner;
 		require(
-			msg.sender ==
-				ownership.ownerOf(
-					_landTokenId
-				),
+			msg.sender == ownership.ownerOf(_landTokenId),
 			"Must be the owner of the land"
 		);
 
@@ -1234,6 +1226,7 @@ contract LandResourceV5 is
 
 		land2ResourceMineState[_landTokenId].totalMiners += 1;
 
+		// v5 remove
 		// if (land2ResourceMineState[_landTokenId].maxMiners == 0) {
 		// 	land2ResourceMineState[_landTokenId].maxMiners = 5;
 		// }
@@ -1557,7 +1550,6 @@ contract LandResourceV5 is
 		view
 		returns (uint256 barsRate)
 	{
-		uint256 maxAmount = itembar.maxAmount();
 		for (uint256 i = 0; i < maxAmount; i++) {
 			barsRate = barsRate.add(getBarRate(_landId, _resource, i));
 		}
@@ -1568,12 +1560,10 @@ contract LandResourceV5 is
 		view
 		returns (uint256 barsMiningStrength)
 	{
-		uint256 maxAmount = itembar.maxAmount();
-		for (uint256 i = 0; i < maxAmount; i++) {
-			barsMiningStrength = barsMiningStrength.add(
-				getBarMiningStrength(_landId, _resource, i)
-			);
-		}
+		return
+			getLandMiningStrength(_landId, _resource)
+				.mul(getBarsRate(_landId, _resource))
+				.div(RATE_PRECISION);
 	}
 
 	function getTotalMiningStrength(uint256 _landId, address _resource)
@@ -1608,14 +1598,14 @@ contract LandResourceV5 is
 		address _resource,
 		uint256 _index
 	) internal view returns (uint256) {
-		return itembar.enhanceStrengthRateByIndex(_resource, _landId, _index);
+		return enhanceStrengthRateByIndex(_resource, _landId, _index);
 	}
 
 	function afterLandItemBarEquiped(
 		uint256 _index,
 		uint256 _landId,
 		address _resource
-	) public auth {
+	) internal {
 		_startBarMining(_index, _landId, _resource);
 	}
 
@@ -1623,7 +1613,7 @@ contract LandResourceV5 is
 		uint256 _index,
 		uint256 _landId,
 		address _resource
-	) public auth {
+	) internal {
 		_stopBarMinig(_index, _landId, _resource);
 	}
 
@@ -1663,7 +1653,7 @@ contract LandResourceV5 is
 
 	function claimItemResource(address _itemToken, uint256 _itemId) public {
 		(address staker, uint256 landId) =
-			itembar.getTokenIdByItem(_itemToken, _itemId);
+			getTokenIdByItem(_itemToken, _itemId);
 		if (staker == address(0) && landId == 0) {
 			require(
 				ERC721(_itemToken).ownerOf(_itemId) == msg.sender,
@@ -1707,13 +1697,7 @@ contract LandResourceV5 is
 	}
 
 	function claimLandResource(uint256 _landId) public {
-		require(
-			msg.sender ==
-				ownership.ownerOf(
-					_landId
-				),
-			"Land: ONLY_LANDER"
-		);
+		require(msg.sender == ownership.ownerOf(_landId), "Land: ONLY_LANDER");
 
 		mine(_landId);
 
@@ -1748,19 +1732,40 @@ contract LandResourceV5 is
 		);
 		if (barsRate > 0) {
 			uint256 barsBalance = _minedBalance.sub(landBalance);
-			for (uint256 i = 0; i < itembar.maxAmount(); i++) {
+			for (uint256 i = 0; i < maxAmount; i++) {
 				uint256 barBalance =
 					barsBalance.mul(getBarRate(_landId, _resource, i)).div(
 						barsRate
 					);
 				(barBalance, landBalance) = _payFee(barBalance, landBalance);
-				(address itemToken, uint256 itemId, ) =
-					itembar.getBarItem(_landId, i);
+				(address itemToken, uint256 itemId, ) = getBarItem(_landId, i);
 				if (_itemId == itemId && _itemToken == itemToken) {
 					barResource = barResource.add(barBalance);
 				}
 			}
 		}
+	}
+
+	function availableLandResources(
+		uint256 _landId,
+		address[] memory _resources
+	) public view returns (uint256[] memory) {
+		uint256[] memory availables = new uint256[](_resources.length);
+		for (uint256 i = 0; i < _resources.length; i++) {
+			uint256 mined = _calculateMinedBalance(_landId, _resources[i], now);
+			(uint256 available, ) =
+				_calculateResources(
+					address(0),
+					0,
+					_landId,
+					_resources[i],
+					mined
+				);
+			availables[i] = available.add(
+				getLandMinedBalance(_landId, _resources[i])
+			);
+		}
+		return availables;
 	}
 
 	function availableItemResources(
@@ -1771,7 +1776,7 @@ contract LandResourceV5 is
 		uint256[] memory availables = new uint256[](_resources.length);
 		for (uint256 i = 0; i < _resources.length; i++) {
 			(address staker, uint256 landId) =
-				itembar.getTokenIdByItem(_itemToken, _itemId);
+				getTokenIdByItem(_itemToken, _itemId);
 			uint256 available = 0;
 			if (staker != address(0) && landId != 0) {
 				uint256 mined =
@@ -1792,5 +1797,201 @@ contract LandResourceV5 is
 			availables[i] = available;
 		}
 		return availables;
+	}
+
+	function isAllowed(
+		uint256 _landTokenId,
+		address _token,
+		uint256 _id
+	) public view returns (bool) {
+		require(
+			interstellarEncoder.getObjectClass(_landTokenId) == 1,
+			"Funace: ONLY_LAND"
+		);
+		return teller.isAllowed(_token, _id);
+	}
+
+	function isNotProtect(address _token, uint256 _id)
+		public
+		view
+		returns (bool)
+	{
+		return protectPeriod[_token][_id] < now;
+	}
+
+	function getBarItem(uint256 _tokenId, uint256 _index)
+		public
+		view
+		returns (
+			address,
+			uint256,
+			address
+		)
+	{
+		require(_index < maxAmount, "Furnace: INDEX_FORBIDDEN.");
+		return (
+			tokenId2Bars[_tokenId][_index].token,
+			tokenId2Bars[_tokenId][_index].id,
+			tokenId2Bars[_tokenId][_index].resource
+		);
+	}
+
+	function getTokenIdByItem(address _item, uint256 _itemId)
+		public
+		view
+		returns (address, uint256)
+	{
+		return (
+			itemId2Index[_item][_itemId].staker,
+			itemId2Index[_item][_itemId].tokenId
+		);
+	}
+
+	/**
+        @dev Equip function, A NFT can equip to EVO Bar (LandBar or ApostleBar).
+        @param _tokenId  Token Id which to be quiped.
+        @param _resource Which resouce appply to.
+        @param _index    Index of the Bar.
+        @param _token    Token address which to quip.
+        @param _id       Token Id which to quip.
+    */
+	function equip(
+		uint256 _tokenId,
+		address _resource,
+		uint256 _index,
+		address _token,
+		uint256 _id
+	) public {
+		_equip(_tokenId, _resource, _index, _token, _id);
+	}
+
+	function _equip(
+		uint256 _tokenId,
+		address _resource,
+		uint256 _index,
+		address _token,
+		uint256 _id
+	) internal {
+		beforeEquip(_tokenId, _resource);
+		uint256 resourceId = landbase.resourceToken2RateAttrId(_resource);
+		require(resourceId > 0 && resourceId < 6, "Furnace: INVALID_RESOURCE");
+		require(isAllowed(_tokenId, _token, _id), "Furnace: PERMISSION");
+		require(_index < maxAmount, "Furnace: INDEX_FORBIDDEN");
+		Bar storage bar = tokenId2Bars[_tokenId][_index];
+		if (bar.token != address(0) && isNotProtect(bar.token, bar.id)) {
+			(, uint16 class, ) = teller.getMetaData(_token, _id);
+			(, uint16 originClass, ) = teller.getMetaData(bar.token, bar.id);
+			require(
+				class >= originClass ||
+					ownership.ownerOf(_tokenId) == msg.sender,
+				"Furnace: FORBIDDEN"
+			);
+			ERC721(bar.token).transferFrom(address(this), bar.staker, bar.id);
+		}
+		ERC721(_token).transferFrom(msg.sender, address(this), _id);
+		bar.staker = msg.sender;
+		bar.token = _token;
+		bar.id = _id;
+		bar.resource = _resource;
+		itemId2Index[bar.token][bar.id] = Status({
+			staker: bar.staker,
+			tokenId: _tokenId,
+			index: _index
+		});
+		if (isNotProtect(bar.token, bar.id)) {
+			protectPeriod[bar.token][bar.id] = SafeMath.add(
+				_calculateProtectPeriod(bar.token, bar.id),
+				now
+			);
+		}
+		afterEquiped(_index, _tokenId, _resource);
+		emit Equip(_tokenId, _resource, _index, bar.staker, bar.token, bar.id);
+	}
+
+	function _calculateProtectPeriod(address _token, uint256 _id)
+		internal
+		view
+		returns (uint256)
+	{
+		(, uint16 class, ) = teller.getMetaData(_token, _id);
+		uint256 baseProtectPeriod =
+			registry.uintOf(UINT_ITEMBAR_PROTECT_PERIOD);
+		return
+			SafeMath.add(
+				baseProtectPeriod,
+				SafeMath.mul(uint256(class), baseProtectPeriod)
+			);
+	}
+
+	function beforeEquip(uint256 _landTokenId, address _resource) internal {
+		if (getLandMiningStrength(_landTokenId, _resource) > 0) {
+			mine(_landTokenId);
+		}
+	}
+
+	function afterEquiped(
+		uint256 _index,
+		uint256 _landTokenId,
+		address _resource
+	) internal {
+		afterLandItemBarEquiped(_index, _landTokenId, _resource);
+	}
+
+	function afterUnequiped(
+		uint256 _index,
+		uint256 _landTokenId,
+		address _resource
+	) internal {
+		if (getLandMiningStrength(_landTokenId, _resource) > 0) {
+			mine(_landTokenId);
+		}
+		afterLandItemBarUnequiped(_index, _landTokenId, _resource);
+	}
+
+	/**
+        @dev Unequip function, A NFT can unequip from EVO Bar (LandBar or ApostleBar).
+        @param _tokenId Token Id which to be unquiped.
+        @param _index   Index of the Bar.
+    */
+	function unequip(uint256 _tokenId, uint256 _index) public {
+		_unequip(_tokenId, _index);
+	}
+
+	function _unequip(uint256 _tokenId, uint256 _index) internal {
+		Bar memory bar = tokenId2Bars[_tokenId][_index];
+		require(bar.token != address(0), "Furnace: EMPTY");
+		require(bar.staker == msg.sender, "Furnace: FORBIDDEN");
+		ERC721(bar.token).transferFrom(address(this), bar.staker, bar.id);
+		//TODO: check
+		afterUnequiped(_index, _tokenId, bar.resource);
+		//clean
+		delete itemId2Index[bar.token][bar.id];
+		delete tokenId2Bars[_tokenId][_index];
+		emit Unequip(
+			_tokenId,
+			bar.resource,
+			_index,
+			bar.staker,
+			bar.token,
+			bar.id
+		);
+	}
+
+	function setMaxAmount(uint256 _maxAmount) public auth {
+		require(_maxAmount > maxAmount, "Furnace: INVALID_MAXAMOUNT");
+		maxAmount = _maxAmount;
+	}
+
+	function enhanceStrengthRateByIndex(
+		address _resource,
+		uint256 _tokenId,
+		uint256 _index
+	) public view returns (uint256) {
+		Bar storage bar = tokenId2Bars[_tokenId][_index];
+		if (bar.token == address(0)) {
+			return 0;
+		}
+		uint256 resourceId = landbase.resourceToken2RateAttrId(_resource);
+		return teller.getRate(bar.token, bar.id, resourceId);
 	}
 }
