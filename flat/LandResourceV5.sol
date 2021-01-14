@@ -1037,15 +1037,15 @@ contract LandResourceV5 is
 	) internal returns (uint256) {
 		uint256 landBalance =
 			minedBalance.mul(RATE_PRECISION).div(barsRate.add(RATE_PRECISION));
-		uint256 barsBalance = minedBalance .sub(landBalance);
+		uint256 barsBalance = minedBalance.sub(landBalance);
 		for (uint256 i = 0; i < maxAmount; i++) {
 			(address itemToken, uint256 itemId, address resouce) =
 				getBarItem(_landId, i);
 			if (itemToken != address(0) && resouce == _resource) {
 				uint256 barBalance =
-					barsBalance
-						.mul(getBarRate(_landId, _resource, i))
-						.div(barsRate);
+					barsBalance.mul(getBarRate(_landId, _resource, i)).div(
+						barsRate
+					);
 				(barBalance, landBalance) = _payFee(barBalance, landBalance);
 				itemMinedBalance[itemToken][itemId][
 					_resource
@@ -1655,8 +1655,7 @@ contract LandResourceV5 is
 	}
 
 	function claimItemResource(address _itemToken, uint256 _itemId) public {
-		(address staker, uint256 landId) =
-			getLandIdByItem(_itemToken, _itemId);
+		(address staker, uint256 landId) = getLandIdByItem(_itemToken, _itemId);
 		if (staker == address(0) && landId == 0) {
 			require(
 				ERC721(_itemToken).ownerOf(_itemId) == msg.sender,
@@ -1882,10 +1881,12 @@ contract LandResourceV5 is
 		require(_index < maxAmount, "Furnace: INDEX_FORBIDDEN");
 		Bar storage bar = landId2Bars[_tokenId][_index];
 		if (bar.token != address(0) && isNotProtect(bar.token, bar.id)) {
-			(, uint16 class, ) = teller.getMetaData(_token, _id);
-			(, uint16 originClass, ) = teller.getMetaData(bar.token, bar.id);
+			(, uint16 class, uint16 grade) = teller.getMetaData(_token, _id);
+			(, uint16 originClass, uint16 originGrade) =
+				teller.getMetaData(bar.token, bar.id);
 			require(
-				class >= originClass ||
+				class > originClass ||
+					(class == originClass && grade > originGrade) ||
 					ownership.ownerOf(_tokenId) == msg.sender,
 				"Furnace: FORBIDDEN"
 			);
