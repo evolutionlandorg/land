@@ -780,9 +780,6 @@ contract LandResourceV5 is
 		uint256 id
 	);
 
-	// 0x434f4e54524143545f4c414e445f4954454d5f42415200000000000000000000
-	bytes32 public constant CONTRACT_LAND_ITEM_BAR = "CONTRACT_LAND_ITEM_BAR";
-
 	//0x4655524e4143455f4954454d5f4d494e455f4645450000000000000000000000
 	bytes32 public constant FURNACE_ITEM_MINE_FEE = "FURNACE_ITEM_MINE_FEE";
 
@@ -799,9 +796,11 @@ contract LandResourceV5 is
 
 	uint256 maxMiners;
 
+	// (itemTokenAddress => (itemTokenId => (resourceAddress => mined balance)))
 	mapping(address => mapping(uint256 => mapping(address => uint256)))
 		public itemMinedBalance;
 
+	// (landTokenId => (resourceAddress => (landBarIndex => itemEnhancedRate)))
 	mapping(uint256 => mapping(address => mapping(uint256 => uint256)))
 		public land2BarRate;
 
@@ -820,9 +819,13 @@ contract LandResourceV5 is
 		uint256 index;
 	}
 
+	// max land bar amount
 	uint256 public maxAmount;
-	mapping(uint256 => mapping(uint256 => Bar)) public tokenId2Bars;
-	mapping(address => mapping(uint256 => Status)) public itemId2Index;
+	// (landTokenId => (landBarIndex => BAR))
+	mapping(uint256 => mapping(uint256 => Bar)) public landId2Bars;
+	// (itemTokenAddress => (itemTokenId => STATUS))
+	mapping(address => mapping(uint256 => Status)) public itemId2Status;
+	// (itemTokenAddress => (itemTokenId => itemProtectPeriod))
 	mapping(address => mapping(uint256 => uint256)) public protectPeriod;
 
 	ERC721 public ownership;
@@ -1034,13 +1037,13 @@ contract LandResourceV5 is
 	) internal returns (uint256) {
 		uint256 landBalance =
 			minedBalance.mul(RATE_PRECISION).div(barsRate.add(RATE_PRECISION));
+		uint256 barsBalance = minedBalance .sub(landBalance);
 		for (uint256 i = 0; i < maxAmount; i++) {
 			(address itemToken, uint256 itemId, address resouce) =
 				getBarItem(_landId, i);
 			if (itemToken != address(0) && resouce == _resource) {
 				uint256 barBalance =
-					minedBalance
-						.sub(landBalance)
+					barsBalance
 						.mul(getBarRate(_landId, _resource, i))
 						.div(barsRate);
 				(barBalance, landBalance) = _payFee(barBalance, landBalance);
@@ -1136,70 +1139,70 @@ contract LandResourceV5 is
 		return minedBalance;
 	}
 
-	function claimAllResource(uint256 _landTokenId) public {
-		require(
-			msg.sender == ownership.ownerOf(_landTokenId),
-			"Must be the owner of the land"
-		);
+	// function claimAllResource(uint256 _landTokenId) public {
+	// 	require(
+	// 		msg.sender == ownership.ownerOf(_landTokenId),
+	// 		"Must be the owner of the land"
+	// 	);
 
-		_mineAllResource(_landTokenId, gold, wood, water, fire, soil);
+	// 	_mineAllResource(_landTokenId, gold, wood, water, fire, soil);
 
-		uint256 goldBalance;
-		uint256 woodBalance;
-		uint256 waterBalance;
-		uint256 fireBalance;
-		uint256 soilBalance;
+	// 	uint256 goldBalance;
+	// 	uint256 woodBalance;
+	// 	uint256 waterBalance;
+	// 	uint256 fireBalance;
+	// 	uint256 soilBalance;
 
-		if (land2ResourceMineState[_landTokenId].mintedBalance[gold] > 0) {
-			goldBalance = land2ResourceMineState[_landTokenId].mintedBalance[
-				gold
-			];
-			IMintableERC20(gold).mint(msg.sender, goldBalance);
-			land2ResourceMineState[_landTokenId].mintedBalance[gold] = 0;
-		}
+	// 	if (land2ResourceMineState[_landTokenId].mintedBalance[gold] > 0) {
+	// 		goldBalance = land2ResourceMineState[_landTokenId].mintedBalance[
+	// 			gold
+	// 		];
+	// 		IMintableERC20(gold).mint(msg.sender, goldBalance);
+	// 		land2ResourceMineState[_landTokenId].mintedBalance[gold] = 0;
+	// 	}
 
-		if (land2ResourceMineState[_landTokenId].mintedBalance[wood] > 0) {
-			woodBalance = land2ResourceMineState[_landTokenId].mintedBalance[
-				wood
-			];
-			IMintableERC20(wood).mint(msg.sender, woodBalance);
-			land2ResourceMineState[_landTokenId].mintedBalance[wood] = 0;
-		}
+	// 	if (land2ResourceMineState[_landTokenId].mintedBalance[wood] > 0) {
+	// 		woodBalance = land2ResourceMineState[_landTokenId].mintedBalance[
+	// 			wood
+	// 		];
+	// 		IMintableERC20(wood).mint(msg.sender, woodBalance);
+	// 		land2ResourceMineState[_landTokenId].mintedBalance[wood] = 0;
+	// 	}
 
-		if (land2ResourceMineState[_landTokenId].mintedBalance[water] > 0) {
-			waterBalance = land2ResourceMineState[_landTokenId].mintedBalance[
-				water
-			];
-			IMintableERC20(water).mint(msg.sender, waterBalance);
-			land2ResourceMineState[_landTokenId].mintedBalance[water] = 0;
-		}
+	// 	if (land2ResourceMineState[_landTokenId].mintedBalance[water] > 0) {
+	// 		waterBalance = land2ResourceMineState[_landTokenId].mintedBalance[
+	// 			water
+	// 		];
+	// 		IMintableERC20(water).mint(msg.sender, waterBalance);
+	// 		land2ResourceMineState[_landTokenId].mintedBalance[water] = 0;
+	// 	}
 
-		if (land2ResourceMineState[_landTokenId].mintedBalance[fire] > 0) {
-			fireBalance = land2ResourceMineState[_landTokenId].mintedBalance[
-				fire
-			];
-			IMintableERC20(fire).mint(msg.sender, fireBalance);
-			land2ResourceMineState[_landTokenId].mintedBalance[fire] = 0;
-		}
+	// 	if (land2ResourceMineState[_landTokenId].mintedBalance[fire] > 0) {
+	// 		fireBalance = land2ResourceMineState[_landTokenId].mintedBalance[
+	// 			fire
+	// 		];
+	// 		IMintableERC20(fire).mint(msg.sender, fireBalance);
+	// 		land2ResourceMineState[_landTokenId].mintedBalance[fire] = 0;
+	// 	}
 
-		if (land2ResourceMineState[_landTokenId].mintedBalance[soil] > 0) {
-			soilBalance = land2ResourceMineState[_landTokenId].mintedBalance[
-				soil
-			];
-			IMintableERC20(soil).mint(msg.sender, soilBalance);
-			land2ResourceMineState[_landTokenId].mintedBalance[soil] = 0;
-		}
+	// 	if (land2ResourceMineState[_landTokenId].mintedBalance[soil] > 0) {
+	// 		soilBalance = land2ResourceMineState[_landTokenId].mintedBalance[
+	// 			soil
+	// 		];
+	// 		IMintableERC20(soil).mint(msg.sender, soilBalance);
+	// 		land2ResourceMineState[_landTokenId].mintedBalance[soil] = 0;
+	// 	}
 
-		emit ResourceClaimed(
-			msg.sender,
-			_landTokenId,
-			goldBalance,
-			woodBalance,
-			waterBalance,
-			fireBalance,
-			soilBalance
-		);
-	}
+	// 	emit ResourceClaimed(
+	// 		msg.sender,
+	// 		_landTokenId,
+	// 		goldBalance,
+	// 		woodBalance,
+	// 		waterBalance,
+	// 		fireBalance,
+	// 		soilBalance
+	// 	);
+	// }
 
 	// both for own _tokenId or hired one
 	function startMining(
@@ -1271,11 +1274,11 @@ contract LandResourceV5 is
 		}
 	}
 
-	function batchClaimAllResource(uint256[] _landTokenIds) public {
+	function batchClaimLandResource(uint256[] _landTokenIds) public {
 		uint256 length = _landTokenIds.length;
 
 		for (uint256 i = 0; i < length; i++) {
-			claimAllResource(_landTokenIds[i]);
+			claimLandResource(_landTokenIds[i]);
 		}
 	}
 
@@ -1653,7 +1656,7 @@ contract LandResourceV5 is
 
 	function claimItemResource(address _itemToken, uint256 _itemId) public {
 		(address staker, uint256 landId) =
-			getTokenIdByItem(_itemToken, _itemId);
+			getLandIdByItem(_itemToken, _itemId);
 		if (staker == address(0) && landId == 0) {
 			require(
 				ERC721(_itemToken).ownerOf(_itemId) == msg.sender,
@@ -1699,7 +1702,7 @@ contract LandResourceV5 is
 	function claimLandResource(uint256 _landId) public {
 		require(msg.sender == ownership.ownerOf(_landId), "Land: ONLY_LANDER");
 
-		mine(_landId);
+		_mineAllResource(_landId, gold, wood, water, fire, soil);
 
 		uint256 goldBalance = _claimLandResource(_landId, gold);
 		uint256 woodBalance = _claimLandResource(_landId, wood);
@@ -1776,7 +1779,7 @@ contract LandResourceV5 is
 		uint256[] memory availables = new uint256[](_resources.length);
 		for (uint256 i = 0; i < _resources.length; i++) {
 			(address staker, uint256 landId) =
-				getTokenIdByItem(_itemToken, _itemId);
+				getLandIdByItem(_itemToken, _itemId);
 			uint256 available = 0;
 			if (staker != address(0) && landId != 0) {
 				uint256 mined =
@@ -1830,20 +1833,20 @@ contract LandResourceV5 is
 	{
 		require(_index < maxAmount, "Furnace: INDEX_FORBIDDEN.");
 		return (
-			tokenId2Bars[_tokenId][_index].token,
-			tokenId2Bars[_tokenId][_index].id,
-			tokenId2Bars[_tokenId][_index].resource
+			landId2Bars[_tokenId][_index].token,
+			landId2Bars[_tokenId][_index].id,
+			landId2Bars[_tokenId][_index].resource
 		);
 	}
 
-	function getTokenIdByItem(address _item, uint256 _itemId)
+	function getLandIdByItem(address _item, uint256 _itemId)
 		public
 		view
 		returns (address, uint256)
 	{
 		return (
-			itemId2Index[_item][_itemId].staker,
-			itemId2Index[_item][_itemId].tokenId
+			itemId2Status[_item][_itemId].staker,
+			itemId2Status[_item][_itemId].tokenId
 		);
 	}
 
@@ -1877,7 +1880,7 @@ contract LandResourceV5 is
 		require(resourceId > 0 && resourceId < 6, "Furnace: INVALID_RESOURCE");
 		require(isAllowed(_tokenId, _token, _id), "Furnace: PERMISSION");
 		require(_index < maxAmount, "Furnace: INDEX_FORBIDDEN");
-		Bar storage bar = tokenId2Bars[_tokenId][_index];
+		Bar storage bar = landId2Bars[_tokenId][_index];
 		if (bar.token != address(0) && isNotProtect(bar.token, bar.id)) {
 			(, uint16 class, ) = teller.getMetaData(_token, _id);
 			(, uint16 originClass, ) = teller.getMetaData(bar.token, bar.id);
@@ -1893,16 +1896,13 @@ contract LandResourceV5 is
 		bar.token = _token;
 		bar.id = _id;
 		bar.resource = _resource;
-		itemId2Index[bar.token][bar.id] = Status({
+		itemId2Status[bar.token][bar.id] = Status({
 			staker: bar.staker,
 			tokenId: _tokenId,
 			index: _index
 		});
 		if (isNotProtect(bar.token, bar.id)) {
-			protectPeriod[bar.token][bar.id] = SafeMath.add(
-				_calculateProtectPeriod(bar.token, bar.id),
-				now
-			);
+			protectPeriod[bar.token][bar.id] = _calculateProtectPeriod(bar.token, bar.id).add(now);
 		}
 		afterEquiped(_index, _tokenId, _resource);
 		emit Equip(_tokenId, _resource, _index, bar.staker, bar.token, bar.id);
@@ -1916,11 +1916,7 @@ contract LandResourceV5 is
 		(, uint16 class, ) = teller.getMetaData(_token, _id);
 		uint256 baseProtectPeriod =
 			registry.uintOf(UINT_ITEMBAR_PROTECT_PERIOD);
-		return
-			SafeMath.add(
-				baseProtectPeriod,
-				SafeMath.mul(uint256(class), baseProtectPeriod)
-			);
+		return baseProtectPeriod.add(uint256(class).mul(baseProtectPeriod));
 	}
 
 	function beforeEquip(uint256 _landTokenId, address _resource) internal {
@@ -1958,15 +1954,14 @@ contract LandResourceV5 is
 	}
 
 	function _unequip(uint256 _tokenId, uint256 _index) internal {
-		Bar memory bar = tokenId2Bars[_tokenId][_index];
+		Bar memory bar = landId2Bars[_tokenId][_index];
 		require(bar.token != address(0), "Furnace: EMPTY");
 		require(bar.staker == msg.sender, "Furnace: FORBIDDEN");
 		ERC721(bar.token).transferFrom(address(this), bar.staker, bar.id);
-		//TODO: check
 		afterUnequiped(_index, _tokenId, bar.resource);
 		//clean
-		delete itemId2Index[bar.token][bar.id];
-		delete tokenId2Bars[_tokenId][_index];
+		delete itemId2Status[bar.token][bar.id];
+		delete landId2Bars[_tokenId][_index];
 		emit Unequip(
 			_tokenId,
 			bar.resource,
@@ -1987,11 +1982,23 @@ contract LandResourceV5 is
 		uint256 _tokenId,
 		uint256 _index
 	) public view returns (uint256) {
-		Bar storage bar = tokenId2Bars[_tokenId][_index];
+		Bar storage bar = landId2Bars[_tokenId][_index];
 		if (bar.token == address(0)) {
 			return 0;
 		}
 		uint256 resourceId = landbase.resourceToken2RateAttrId(_resource);
 		return teller.getRate(bar.token, bar.id, resourceId);
+	}
+
+	function enhanceStrengthRateOf(address _resource, uint256 _tokenId)
+		external
+		view
+		returns (uint256)
+	{
+		uint256 rate;
+		for (uint256 i = 0; i < maxAmount; i++) {
+			rate = rate.add(enhanceStrengthRateByIndex(_resource, _tokenId, i));
+		}
+		return rate;
 	}
 }
