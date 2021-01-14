@@ -1248,7 +1248,8 @@ contract LandResourceV5 is
 		require(isAllowed(_tokenId, _token, _id), "Furnace: PERMISSION");
 		require(_index < maxAmount, "Furnace: INDEX_FORBIDDEN");
 		Bar storage bar = landId2Bars[_tokenId][_index];
-		if (bar.token != address(0) && isNotProtect(bar.token, bar.id)) {
+		if (bar.token != address(0)) {
+			require(isNotProtect(bar.token, bar.id), "Furnace: PROTECT_PERIOD");
 			(, uint16 class, uint16 grade) = teller.getMetaData(_token, _id);
 			(, uint16 originClass, uint16 originGrade) =
 				teller.getMetaData(bar.token, bar.id);
