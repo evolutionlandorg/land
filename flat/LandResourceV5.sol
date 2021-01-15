@@ -1967,15 +1967,4 @@ contract LandResourceV5 is
 		return teller.getRate(bar.token, bar.id, resourceId);
 	}
 
-	function enhanceStrengthRateOf(address _resource, uint256 _tokenId)
-		external
-		view
-		returns (uint256)
-	{
-		uint256 rate;
-		for (uint256 i = 0; i < maxAmount; i++) {
-			rate = rate.add(enhanceStrengthRateByIndex(_resource, _tokenId, i));
-		}
-		return rate;
-	}
 }
