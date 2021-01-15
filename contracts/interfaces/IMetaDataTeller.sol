@@ -7,8 +7,6 @@ interface IMetaDataTeller {
 		uint112 _strengthRate
 	) external;
 
-	function getObjClassExt(address _token, uint256 _id) external view returns (uint16 objClassExt);
-
 	//0xf666196d
 	function getMetaData(address _token, uint256 _id)
 		external
@@ -25,6 +23,4 @@ interface IMetaDataTeller {
 		uint256 _index
 	) external view returns (uint256);
 
-	//0xf8350ed0
-	function isAllowed(address _token, uint256 _id) external view returns (bool);
 }
