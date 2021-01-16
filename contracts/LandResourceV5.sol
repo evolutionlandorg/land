@@ -132,7 +132,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		address token,
 		uint256 id
 	);
-	event Unequip(
+	event Divest(
 		uint256 indexed tokenId,
 		address resource,
 		uint256 index,
@@ -1345,7 +1345,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		_startBarMining(_index, _landTokenId, _resource);
 	}
 
-	function afterUnequiped(
+	function afterDivested(
 		uint256 _index,
 		uint256 _landTokenId,
 		address _resource
@@ -1357,24 +1357,24 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	}
 
 	/**
-        @dev Unequip function, A NFT can unequip from EVO Bar (LandBar or ApostleBar).
+        @dev Divest function, A NFT can Divest from EVO Bar (LandBar or ApostleBar).
         @param _tokenId Token Id which to be unquiped.
         @param _index   Index of the Bar.
     */
-	function unequip(uint256 _tokenId, uint256 _index) public {
-		_unequip(_tokenId, _index);
+	function divest(uint256 _tokenId, uint256 _index) public {
+		_divest(_tokenId, _index);
 	}
 
-	function _unequip(uint256 _tokenId, uint256 _index) internal {
+	function _divest(uint256 _tokenId, uint256 _index) internal {
 		Bar memory bar = landId2Bars[_tokenId][_index];
 		require(bar.token != address(0), "Furnace: EMPTY");
 		require(bar.staker == msg.sender, "Furnace: FORBIDDEN");
 		ERC721(bar.token).transferFrom(address(this), bar.staker, bar.id);
-		afterUnequiped(_index, _tokenId, bar.resource);
+		afterDivested(_index, _tokenId, bar.resource);
 		//clean
 		delete itemId2Status[bar.token][bar.id];
 		delete landId2Bars[_tokenId][_index];
-		emit Unequip(
+		emit Divest(
 			_tokenId,
 			bar.resource,
 			_index,

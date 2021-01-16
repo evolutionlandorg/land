@@ -537,9 +537,13 @@ interface IMetaDataTeller {
 	function getMetaData(address _token, uint256 _id)
 		external
 		view
-		returns (uint16, uint16, uint16);
+		returns (
+			uint16,
+			uint16,
+			uint16
+		);
 
-    //0x7999a5cf
+	//0x7999a5cf
 	function getPrefer(address _token) external view returns (uint256);
 
 	//0x33281815
@@ -548,7 +552,6 @@ interface IMetaDataTeller {
 		uint256 _id,
 		uint256 _index
 	) external view returns (uint256);
-
 }
 
 
@@ -569,11 +572,7 @@ pragma solidity ^0.4.24;
 // import "contracts/interfaces/ILandBase.sol";
 // import "contracts/interfaces/IMetaDataTeller.sol";
 
-contract LandResourceV5 is
-	SupportsInterfaceWithLookup,
-	DSAuth,
-	IActivity
-{
+contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	using SafeMath for *;
 
 	// For every seconds, the speed will decrease by current speed multiplying (DENOMINATOR_in_seconds - seconds) / DENOMINATOR_in_seconds
@@ -692,7 +691,7 @@ contract LandResourceV5 is
 		address token,
 		uint256 id
 	);
-	event Unequip(
+	event Divest(
 		uint256 indexed tokenId,
 		address resource,
 		uint256 index,
@@ -701,32 +700,39 @@ contract LandResourceV5 is
 		uint256 id
 	);
 
-    // 0x434f4e54524143545f4c414e445f424153450000000000000000000000000000
-    bytes32 public constant CONTRACT_LAND_BASE = "CONTRACT_LAND_BASE";
+	// 0x434f4e54524143545f4c414e445f424153450000000000000000000000000000
+	bytes32 public constant CONTRACT_LAND_BASE = "CONTRACT_LAND_BASE";
 
-    // 0x434f4e54524143545f474f4c445f45524332305f544f4b454e00000000000000
-    bytes32 public constant CONTRACT_GOLD_ERC20_TOKEN = "CONTRACT_GOLD_ERC20_TOKEN";
+	// 0x434f4e54524143545f474f4c445f45524332305f544f4b454e00000000000000
+	bytes32 public constant CONTRACT_GOLD_ERC20_TOKEN =
+		"CONTRACT_GOLD_ERC20_TOKEN";
 
-    // 0x434f4e54524143545f574f4f445f45524332305f544f4b454e00000000000000
-    bytes32 public constant CONTRACT_WOOD_ERC20_TOKEN = "CONTRACT_WOOD_ERC20_TOKEN";
+	// 0x434f4e54524143545f574f4f445f45524332305f544f4b454e00000000000000
+	bytes32 public constant CONTRACT_WOOD_ERC20_TOKEN =
+		"CONTRACT_WOOD_ERC20_TOKEN";
 
-    // 0x434f4e54524143545f57415445525f45524332305f544f4b454e000000000000
-    bytes32 public constant CONTRACT_WATER_ERC20_TOKEN = "CONTRACT_WATER_ERC20_TOKEN";
+	// 0x434f4e54524143545f57415445525f45524332305f544f4b454e000000000000
+	bytes32 public constant CONTRACT_WATER_ERC20_TOKEN =
+		"CONTRACT_WATER_ERC20_TOKEN";
 
-    // 0x434f4e54524143545f464952455f45524332305f544f4b454e00000000000000
-    bytes32 public constant CONTRACT_FIRE_ERC20_TOKEN = "CONTRACT_FIRE_ERC20_TOKEN";
+	// 0x434f4e54524143545f464952455f45524332305f544f4b454e00000000000000
+	bytes32 public constant CONTRACT_FIRE_ERC20_TOKEN =
+		"CONTRACT_FIRE_ERC20_TOKEN";
 
-    // 0x434f4e54524143545f534f494c5f45524332305f544f4b454e00000000000000
-    bytes32 public constant CONTRACT_SOIL_ERC20_TOKEN = "CONTRACT_SOIL_ERC20_TOKEN";
+	// 0x434f4e54524143545f534f494c5f45524332305f544f4b454e00000000000000
+	bytes32 public constant CONTRACT_SOIL_ERC20_TOKEN =
+		"CONTRACT_SOIL_ERC20_TOKEN";
 
-    // 0x434f4e54524143545f494e5445525354454c4c41525f454e434f444552000000
-    bytes32 public constant CONTRACT_INTERSTELLAR_ENCODER = "CONTRACT_INTERSTELLAR_ENCODER";
+	// 0x434f4e54524143545f494e5445525354454c4c41525f454e434f444552000000
+	bytes32 public constant CONTRACT_INTERSTELLAR_ENCODER =
+		"CONTRACT_INTERSTELLAR_ENCODER";
 
-    // 0x434f4e54524143545f4f424a4543545f4f574e45525348495000000000000000
-    bytes32 public constant CONTRACT_OBJECT_OWNERSHIP = "CONTRACT_OBJECT_OWNERSHIP";
+	// 0x434f4e54524143545f4f424a4543545f4f574e45525348495000000000000000
+	bytes32 public constant CONTRACT_OBJECT_OWNERSHIP =
+		"CONTRACT_OBJECT_OWNERSHIP";
 
-    // 0x434f4e54524143545f544f4b454e5f5553450000000000000000000000000000
-    bytes32 public constant CONTRACT_TOKEN_USE = "CONTRACT_TOKEN_USE";
+	// 0x434f4e54524143545f544f4b454e5f5553450000000000000000000000000000
+	bytes32 public constant CONTRACT_TOKEN_USE = "CONTRACT_TOKEN_USE";
 
 	//0x4655524e4143455f4954454d5f4d494e455f4645450000000000000000000000
 	bytes32 public constant FURNACE_ITEM_MINE_FEE = "FURNACE_ITEM_MINE_FEE";
@@ -909,14 +915,14 @@ contract LandResourceV5 is
 	}
 
 	function mine(uint256 _landTokenId) public {
-        _mineAllResource(
-            _landTokenId,
-            registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN),
-            registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN),
-            registry.addressOf(CONTRACT_WATER_ERC20_TOKEN),
-            registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN),
-            registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN)
-        );
+		_mineAllResource(
+			_landTokenId,
+			registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN),
+			registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN),
+			registry.addressOf(CONTRACT_WATER_ERC20_TOKEN),
+			registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN),
+			registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN)
+		);
 	}
 
 	function _mineAllResource(
@@ -929,8 +935,9 @@ contract LandResourceV5 is
 	) internal {
 		require(
 			IInterstellarEncoder(
-							registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
-									).getObjectClass(_landTokenId) == 1,
+				registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
+			)
+				.getObjectClass(_landTokenId) == 1,
 			"Token must be land."
 		);
 
@@ -1141,11 +1148,18 @@ contract LandResourceV5 is
 		uint256 _landTokenId,
 		address _resource
 	) public {
-		ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).addActivity(_tokenId, msg.sender, 0);
+		ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).addActivity(
+			_tokenId,
+			msg.sender,
+			0
+		);
 
 		// require the permission from land owner;
 		require(
-			msg.sender == ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(_landTokenId),
+			msg.sender ==
+				ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(
+					_landTokenId
+				),
 			"Must be the owner of the land"
 		);
 
@@ -1170,9 +1184,11 @@ contract LandResourceV5 is
 			"Land: EXCEED_MAXAMOUNT"
 		);
 
-		address miner = IInterstellarEncoder(
-						registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
-								).getObjectAddress(_tokenId);
+		address miner =
+			IInterstellarEncoder(
+				registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
+			)
+				.getObjectAddress(_tokenId);
 		uint256 strength =
 			IMinerObject(miner).strengthOf(_tokenId, _resource, _landTokenId);
 
@@ -1221,7 +1237,10 @@ contract LandResourceV5 is
 	}
 
 	function stopMining(uint256 _tokenId) public {
-		ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).removeActivity(_tokenId, msg.sender);
+		ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).removeActivity(
+			_tokenId,
+			msg.sender
+		);
 	}
 
 	function _stopMining(uint256 _tokenId) internal {
@@ -1256,9 +1275,11 @@ contract LandResourceV5 is
 
 		land2ResourceMineState[landTokenId].totalMiners -= 1;
 
-		address miner = IInterstellarEncoder(
-						registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
-								).getObjectAddress(_tokenId);
+		address miner =
+			IInterstellarEncoder(
+				registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
+			)
+				.getObjectAddress(_tokenId);
 		uint256 strength =
 			IMinerObject(miner).strengthOf(_tokenId, resource, landTokenId);
 
@@ -1385,9 +1406,11 @@ contract LandResourceV5 is
 
 		address resource = miner2Index[_apostleTokenId].resource;
 
-		address miner = IInterstellarEncoder(
-						registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
-								).getObjectAddress(_apostleTokenId);
+		address miner =
+			IInterstellarEncoder(
+				registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
+			)
+				.getObjectAddress(_apostleTokenId);
 		uint256 strength =
 			IMinerObject(miner).strengthOf(
 				_apostleTokenId,
@@ -1625,7 +1648,13 @@ contract LandResourceV5 is
 	}
 
 	function claimLandResource(uint256 _landId) public {
-		require(msg.sender == ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(_landId), "Land: ONLY_LANDER");
+		require(
+			msg.sender ==
+				ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(
+					_landId
+				),
+			"Land: ONLY_LANDER"
+		);
 
 		address gold = registry.addressOf(CONTRACT_GOLD_ERC20_TOKEN);
 		address wood = registry.addressOf(CONTRACT_WOOD_ERC20_TOKEN);
@@ -1794,17 +1823,22 @@ contract LandResourceV5 is
 		uint256 _id
 	) internal {
 		beforeEquip(_tokenId, _resource);
-		IMetaDataTeller teller = IMetaDataTeller(registry.addressOf(CONTRACT_METADATA_TELLER));
-		uint256 resourceId = ILandBase(registry.addressOf(CONTRACT_LAND_BASE)).resourceToken2RateAttrId(_resource);
+		IMetaDataTeller teller =
+			IMetaDataTeller(registry.addressOf(CONTRACT_METADATA_TELLER));
+		uint256 resourceId =
+			ILandBase(registry.addressOf(CONTRACT_LAND_BASE))
+				.resourceToken2RateAttrId(_resource);
 		require(resourceId > 0 && resourceId < 6, "Furnace: INVALID_RESOURCE");
 		require(
 			IInterstellarEncoder(
-							registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
-									).getObjectClass(_tokenId) == 1,
+				registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
+			)
+				.getObjectClass(_tokenId) == 1,
 			"Funace: ONLY_LAND"
 		);
-		(uint16 objClassExt, uint16 class, uint16 grade) = teller.getMetaData(_token, _id);
-		require(objClassExt > 0,  "Furnace: PERMISSION");
+		(uint16 objClassExt, uint16 class, uint16 grade) =
+			teller.getMetaData(_token, _id);
+		require(objClassExt > 0, "Furnace: PERMISSION");
 		require(_index < maxAmount, "Furnace: INDEX_FORBIDDEN");
 		Bar storage bar = landId2Bars[_tokenId][_index];
 		if (bar.token != address(0)) {
@@ -1814,7 +1848,9 @@ contract LandResourceV5 is
 			require(
 				class > originClass ||
 					(class == originClass && grade > originGrade) ||
-					ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(_tokenId) == msg.sender,
+					ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP))
+						.ownerOf(_tokenId) ==
+					msg.sender,
 				"Furnace: FORBIDDEN"
 			);
 			//TODO:: safe transfer
@@ -1831,17 +1867,24 @@ contract LandResourceV5 is
 			index: _index
 		});
 		if (isNotProtect(bar.token, bar.id)) {
-			protectPeriod[bar.token][bar.id] = _calculateProtectPeriod(bar.token, bar.id, class).add(now);
+			protectPeriod[bar.token][bar.id] = _calculateProtectPeriod(
+				bar
+					.token,
+				bar
+					.id,
+				class
+			)
+				.add(now);
 		}
 		afterEquiped(_index, _tokenId, _resource);
 		emit Equip(_tokenId, _resource, _index, bar.staker, bar.token, bar.id);
 	}
 
-	function _calculateProtectPeriod(address _token, uint256 _id, uint16 _class)
-		internal
-		view
-		returns (uint256)
-	{
+	function _calculateProtectPeriod(
+		address _token,
+		uint256 _id,
+		uint16 _class
+	) internal view returns (uint256) {
 		uint256 baseProtectPeriod =
 			registry.uintOf(UINT_ITEMBAR_PROTECT_PERIOD);
 		return baseProtectPeriod.add(uint256(_class).mul(baseProtectPeriod));
@@ -1861,7 +1904,7 @@ contract LandResourceV5 is
 		_startBarMining(_index, _landTokenId, _resource);
 	}
 
-	function afterUnequiped(
+	function afterDivested(
 		uint256 _index,
 		uint256 _landTokenId,
 		address _resource
@@ -1873,24 +1916,24 @@ contract LandResourceV5 is
 	}
 
 	/**
-        @dev Unequip function, A NFT can unequip from EVO Bar (LandBar or ApostleBar).
+        @dev Divest function, A NFT can Divest from EVO Bar (LandBar or ApostleBar).
         @param _tokenId Token Id which to be unquiped.
         @param _index   Index of the Bar.
     */
-	function unequip(uint256 _tokenId, uint256 _index) public {
-		_unequip(_tokenId, _index);
+	function divest(uint256 _tokenId, uint256 _index) public {
+		_divest(_tokenId, _index);
 	}
 
-	function _unequip(uint256 _tokenId, uint256 _index) internal {
+	function _divest(uint256 _tokenId, uint256 _index) internal {
 		Bar memory bar = landId2Bars[_tokenId][_index];
 		require(bar.token != address(0), "Furnace: EMPTY");
 		require(bar.staker == msg.sender, "Furnace: FORBIDDEN");
 		ERC721(bar.token).transferFrom(address(this), bar.staker, bar.id);
-		afterUnequiped(_index, _tokenId, bar.resource);
+		afterDivested(_index, _tokenId, bar.resource);
 		//clean
 		delete itemId2Status[bar.token][bar.id];
 		delete landId2Bars[_tokenId][_index];
-		emit Unequip(
+		emit Divest(
 			_tokenId,
 			bar.resource,
 			_index,
@@ -1914,20 +1957,23 @@ contract LandResourceV5 is
 		if (bar.token == address(0)) {
 			return 0;
 		}
-		IMetaDataTeller teller = IMetaDataTeller(registry.addressOf(CONTRACT_METADATA_TELLER));
-		uint256 resourceId = ILandBase(registry.addressOf(CONTRACT_LAND_BASE)).resourceToken2RateAttrId(_resource);
+		IMetaDataTeller teller =
+			IMetaDataTeller(registry.addressOf(CONTRACT_METADATA_TELLER));
+		uint256 resourceId =
+			ILandBase(registry.addressOf(CONTRACT_LAND_BASE))
+				.resourceToken2RateAttrId(_resource);
 		return teller.getRate(bar.token, bar.id, resourceId);
 	}
 
-	function enhanceStrengthRateOf(address _resource, uint256 _tokenId)	
-		external	
-		view	
-		returns (uint256)	
-	{	
-		uint256 rate;	
-		for (uint256 i = 0; i < maxAmount; i++) {	
-			rate = rate.add(enhanceStrengthRateByIndex(_resource, _tokenId, i));	
-		}	
-		return rate;	
+	function enhanceStrengthRateOf(address _resource, uint256 _tokenId)
+		external
+		view
+		returns (uint256)
+	{
+		uint256 rate;
+		for (uint256 i = 0; i < maxAmount; i++) {
+			rate = rate.add(enhanceStrengthRateByIndex(_resource, _tokenId, i));
+		}
+		return rate;
 	}
 }
