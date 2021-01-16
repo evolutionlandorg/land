@@ -6,20 +6,17 @@ import "openzeppelin-solidity/contracts/introspection/SupportsInterfaceWithLooku
 import "@evolutionland/common/contracts/interfaces/IMintableERC20.sol";
 import "@evolutionland/common/contracts/interfaces/ISettingsRegistry.sol";
 import "@evolutionland/common/contracts/DSAuth.sol";
-import "@evolutionland/common/contracts/SettingIds.sol";
 import "@evolutionland/common/contracts/interfaces/IInterstellarEncoder.sol";
 import "@evolutionland/common/contracts/interfaces/ITokenUse.sol";
 import "@evolutionland/common/contracts/interfaces/IActivity.sol";
 import "@evolutionland/common/contracts/interfaces/IMinerObject.sol";
 import "./interfaces/ILandBase.sol";
 import "./interfaces/IMetaDataTeller.sol";
-import "./LandSettingIds.sol";
 
 contract LandResourceV5 is
 	SupportsInterfaceWithLookup,
 	DSAuth,
-	IActivity,
-	LandSettingIds
+	IActivity
 {
 	using SafeMath for *;
 
@@ -147,6 +144,33 @@ contract LandResourceV5 is
 		address token,
 		uint256 id
 	);
+
+    // 0x434f4e54524143545f4c414e445f424153450000000000000000000000000000
+    bytes32 public constant CONTRACT_LAND_BASE = "CONTRACT_LAND_BASE";
+
+    // 0x434f4e54524143545f474f4c445f45524332305f544f4b454e00000000000000
+    bytes32 public constant CONTRACT_GOLD_ERC20_TOKEN = "CONTRACT_GOLD_ERC20_TOKEN";
+
+    // 0x434f4e54524143545f574f4f445f45524332305f544f4b454e00000000000000
+    bytes32 public constant CONTRACT_WOOD_ERC20_TOKEN = "CONTRACT_WOOD_ERC20_TOKEN";
+
+    // 0x434f4e54524143545f57415445525f45524332305f544f4b454e000000000000
+    bytes32 public constant CONTRACT_WATER_ERC20_TOKEN = "CONTRACT_WATER_ERC20_TOKEN";
+
+    // 0x434f4e54524143545f464952455f45524332305f544f4b454e00000000000000
+    bytes32 public constant CONTRACT_FIRE_ERC20_TOKEN = "CONTRACT_FIRE_ERC20_TOKEN";
+
+    // 0x434f4e54524143545f534f494c5f45524332305f544f4b454e00000000000000
+    bytes32 public constant CONTRACT_SOIL_ERC20_TOKEN = "CONTRACT_SOIL_ERC20_TOKEN";
+
+    // 0x434f4e54524143545f494e5445525354454c4c41525f454e434f444552000000
+    bytes32 public constant CONTRACT_INTERSTELLAR_ENCODER = "CONTRACT_INTERSTELLAR_ENCODER";
+
+    // 0x434f4e54524143545f4f424a4543545f4f574e45525348495000000000000000
+    bytes32 public constant CONTRACT_OBJECT_OWNERSHIP = "CONTRACT_OBJECT_OWNERSHIP";
+
+    // 0x434f4e54524143545f544f4b454e5f5553450000000000000000000000000000
+    bytes32 public constant CONTRACT_TOKEN_USE = "CONTRACT_TOKEN_USE";
 
 	//0x4655524e4143455f4954454d5f4d494e455f4645450000000000000000000000
 	bytes32 public constant FURNACE_ITEM_MINE_FEE = "FURNACE_ITEM_MINE_FEE";
@@ -1339,4 +1363,15 @@ contract LandResourceV5 is
 		return teller.getRate(bar.token, bar.id, resourceId);
 	}
 
+	function enhanceStrengthRateOf(address _resource, uint256 _tokenId)	
+		external	
+		view	
+		returns (uint256)	
+	{	
+		uint256 rate;	
+		for (uint256 i = 0; i < maxAmount; i++) {	
+			rate = rate.add(enhanceStrengthRateByIndex(_resource, _tokenId, i));	
+		}	
+		return rate;	
+	}
 }
