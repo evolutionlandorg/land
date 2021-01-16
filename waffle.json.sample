@@ -2,7 +2,7 @@
   "sourceDirectory": "./contracts",
   "outputDirectory": "./build",
   "nodeModulesDirectory": "./node_modules",
-  "flattenOutputDirectory": "./contracts-flattener",
+  "flattenOutputDirectory": "./flat",
   "cacheDirectory": "./cache",
   "compilerType": "solcjs",
   "compilerVersion": "0.4.24"
