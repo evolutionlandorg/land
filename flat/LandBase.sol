@@ -533,7 +533,7 @@ contract LandBase is DSAuth, ILandBase, SettingIds {
     }
 
     modifier xAtlantisRangeLimit(int _x) {
-        require(_x >= -22 && _x <= -22, "Invalid range.");
+        require(_x >= -22 && _x <= 22, "Invalid range.");
         _;
     }
 
