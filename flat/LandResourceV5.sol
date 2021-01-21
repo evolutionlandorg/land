@@ -483,41 +483,12 @@ contract IMinerObject is ERC165  {
 
 }
 
-// Dependency file: contracts/interfaces/ILandBase.sol
+// Dependency file: contracts/interfaces/ILandBaseExt.sol
 
 // pragma solidity ^0.4.24;
 
-contract ILandBase {
-
-    /*
-     *  Event
-     */
-    event ModifiedResourceRate(uint indexed tokenId, address resourceToken, uint16 newResourceRate);
-    event HasboxSetted(uint indexed tokenId, bool hasBox);
-
-    event ChangedReourceRateAttr(uint indexed tokenId, uint256 attr);
-
-    event ChangedFlagMask(uint indexed tokenId, uint256 newFlagMask);
-
-    event CreatedNewLand(uint indexed tokenId, int x, int y, address beneficiary, uint256 resourceRateAttr, uint256 mask);
-
-    function defineResouceTokenRateAttrId(address _resourceToken, uint8 _attrId) public;
-
-    function setHasBox(uint _landTokenID, bool isHasBox) public;
-    function isReserved(uint256 _tokenId) public view returns (bool);
-    function isSpecial(uint256 _tokenId) public view returns (bool);
-    function isHasBox(uint256 _tokenId) public view returns (bool);
-
-    function getResourceRateAttr(uint _landTokenId) public view returns (uint256);
-    function setResourceRateAttr(uint _landTokenId, uint256 _newResourceRateAttr) public;
-
-    function getResourceRate(uint _landTokenId, address _resouceToken) public view returns (uint16);
-    function setResourceRate(uint _landTokenID, address _resourceToken, uint16 _newResouceRate) public;
-
-    function getFlagMask(uint _landTokenId) public view returns (uint256);
-
-    function setFlagMask(uint _landTokenId, uint256 _newFlagMask) public;
-
+interface ILandBaseExt {
+    function getResourceRate(uint _landTokenId, address _resouceToken) external view returns (uint16);
     function resourceToken2RateAttrId(address _resourceToken) external view returns (uint256);
 }
 
@@ -569,7 +540,7 @@ pragma solidity ^0.4.24;
 // import "@evolutionland/common/contracts/interfaces/ITokenUse.sol";
 // import "@evolutionland/common/contracts/interfaces/IActivity.sol";
 // import "@evolutionland/common/contracts/interfaces/IMinerObject.sol";
-// import "contracts/interfaces/ILandBase.sol";
+// import "contracts/interfaces/ILandBaseExt.sol";
 // import "contracts/interfaces/IMetaDataTeller.sol";
 
 contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
@@ -864,7 +835,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		uint256 _time
 	) public view returns (uint256 currentSpeed) {
 		return
-			ILandBase(registry.addressOf(CONTRACT_LAND_BASE))
+			ILandBaseExt(registry.addressOf(CONTRACT_LAND_BASE))
 				.getResourceRate(_tokenId, _resource)
 				.mul(_getReleaseSpeedInSeconds(_tokenId, _time))
 				.mul(1 ether)
@@ -878,7 +849,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		uint256 _lastUpdateTime
 	) public view returns (uint256 minableBalance) {
 		uint256 speed_in_current_period =
-			ILandBase(registry.addressOf(CONTRACT_LAND_BASE))
+			ILandBaseExt(registry.addressOf(CONTRACT_LAND_BASE))
 				.getResourceRate(_tokenId, _resource)
 				.mul(
 				_getReleaseSpeedInSeconds(
@@ -1826,7 +1797,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		IMetaDataTeller teller =
 			IMetaDataTeller(registry.addressOf(CONTRACT_METADATA_TELLER));
 		uint256 resourceId =
-			ILandBase(registry.addressOf(CONTRACT_LAND_BASE))
+			ILandBaseExt(registry.addressOf(CONTRACT_LAND_BASE))
 				.resourceToken2RateAttrId(_resource);
 		require(resourceId > 0 && resourceId < 6, "Furnace: INVALID_RESOURCE");
 		require(
@@ -1960,7 +1931,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		IMetaDataTeller teller =
 			IMetaDataTeller(registry.addressOf(CONTRACT_METADATA_TELLER));
 		uint256 resourceId =
-			ILandBase(registry.addressOf(CONTRACT_LAND_BASE))
+			ILandBaseExt(registry.addressOf(CONTRACT_LAND_BASE))
 				.resourceToken2RateAttrId(_resource);
 		return teller.getRate(bar.token, bar.id, resourceId);
 	}
