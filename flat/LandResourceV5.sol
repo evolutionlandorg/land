@@ -1875,22 +1875,13 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 			index: _index
 		});
 		if (isNotProtect(bar.token, bar.id)) {
-			protectPeriod[bar.token][bar.id] = _calculateProtectPeriod(
-				bar
-					.token,
-				bar
-					.id,
-				class
-			)
-				.add(now);
+			protectPeriod[bar.token][bar.id] = _calculateProtectPeriod(class).add(now);
 		}
 		afterEquiped(_index, _tokenId, _resource);
 		emit Equip(_tokenId, _resource, _index, bar.staker, bar.token, bar.id);
 	}
 
 	function _calculateProtectPeriod(
-		address _token,
-		uint256 _id,
 		uint16 _class
 	) internal view returns (uint256) {
 		uint256 baseProtectPeriod =
