@@ -1855,6 +1855,14 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 			);
 			//TODO:: safe transfer
 			ERC721(bar.token).transferFrom(address(this), bar.staker, bar.id);
+			emit Divest(
+				_tokenId,
+				bar.resource,
+				_index,
+				bar.staker,
+				bar.token,
+				bar.id
+			);
 		}
 		ERC721(_token).transferFrom(msg.sender, address(this), _id);
 		bar.staker = msg.sender;
