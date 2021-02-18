@@ -1155,18 +1155,20 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	) public view returns (uint256[] memory) {
 		uint256[] memory availables = new uint256[](_resources.length);
 		for (uint256 i = 0; i < _resources.length; i++) {
-			uint256 mined = _calculateMinedBalance(_landId, _resources[i], now);
-			(uint256 available, ) =
-				_calculateResources(
-					address(0),
-					0,
-					_landId,
-					_resources[i],
-					mined
+			if (getLandMiningStrength(_landId, _resources[i]) > 0) {
+				uint256 mined = _calculateMinedBalance(_landId, _resources[i], now);
+				(uint256 available, ) =
+					_calculateResources(
+						address(0),
+						0,
+						_landId,
+						_resources[i],
+						mined
+					);
+				availables[i] = available.add(
+					getLandMinedBalance(_landId, _resources[i])
 				);
-			availables[i] = available.add(
-				getLandMinedBalance(_landId, _resources[i])
-			);
+			}
 		}
 		return availables;
 	}
@@ -1180,24 +1182,26 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		for (uint256 i = 0; i < _resources.length; i++) {
 			(address staker, uint256 landId) =
 				getLandIdByItem(_itemToken, _itemId);
-			uint256 available = 0;
-			if (staker != address(0) && landId != 0) {
-				uint256 mined =
-					_calculateMinedBalance(landId, _resources[i], now);
-				(, uint256 availableItem) =
-					_calculateResources(
-						_itemToken,
-						_itemId,
-						landId,
-						_resources[i],
-						mined
-					);
-				available = available.add(availableItem);
+			if (getLandMiningStrength(landId, _resources[i]) > 0) {
+				uint256 available = 0;
+				if (staker != address(0) && landId != 0) {
+					uint256 mined =
+						_calculateMinedBalance(landId, _resources[i], now);
+					(, uint256 availableItem) =
+						_calculateResources(
+							_itemToken,
+							_itemId,
+							landId,
+							_resources[i],
+							mined
+						);
+					available = available.add(availableItem);
+				}
+				available = available.add(
+					getItemMinedBalance(_itemToken, _itemId, _resources[i])
+				);
+				availables[i] = available;
 			}
-			available = available.add(
-				getItemMinedBalance(_itemToken, _itemId, _resources[i])
-			);
-			availables[i] = available;
 		}
 		return availables;
 	}
