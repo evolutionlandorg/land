@@ -1700,8 +1700,8 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 						barsRate
 					);
 				(barBalance, landBalance) = _payFee(barBalance, landBalance);
-				(address itemToken, uint256 itemId, ) = getBarItem(_landId, i);
-				if (_itemId == itemId && _itemToken == itemToken) {
+				(address itemToken, uint256 itemId, address resource) = getBarItem(_landId, i);
+				if (_itemId == itemId && _itemToken == itemToken && _resource == resource) {
 					barResource = barResource.add(barBalance);
 				}
 			}
