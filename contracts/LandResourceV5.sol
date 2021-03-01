@@ -1239,7 +1239,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	{
 		return (
 			itemId2Status[_item][_itemId].staker,
-			itemId2Status[_item][_itemId].tokenId
+			itemId2Status[_item][_itemId].landTokenId
 		);
 	}
 
