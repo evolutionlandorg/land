@@ -189,7 +189,8 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	// rate precision
 	uint128 public constant RATE_PRECISION = 10**8;
 
-	uint256 maxMiners;
+	// max land miner amounts
+	uint256 public maxMiners;
 
 	// (itemTokenAddress => (itemTokenId => (resourceAddress => mined balance)))
 	mapping(address => mapping(uint256 => mapping(address => uint256)))
@@ -199,19 +200,19 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	mapping(uint256 => mapping(address => mapping(uint256 => uint256)))
 		public land2BarRate;
 
-	// land bar
+	// land item bar
 	struct Bar {
-		address staker;
-		address token;
-		uint256 id;
-		address resource;
+		address staker;    // staker who equip item to the land item bar
+		address token;     // item token address of the item which equpped in the land item bar
+		uint256 id;        // item token id
+		address resource;  // which resource staker want to stake
 	}
 
-	// bar status
+	// land item bar status
 	struct Status {
-		address staker;
-		uint256 tokenId;
-		uint256 index;
+		address staker;    // staker who equip item to the land item bar
+		uint256 landTokenId; // land token id which the item equipped
+		uint256 index;     // land item bar slot which the item equipped
 	}
 
 	// max land bar amount
@@ -1260,6 +1261,10 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		_equip(_tokenId, _resource, _index, _token, _id);
 	}
 
+	/// equip rules:
+	/// 1. land owner could replace item which is not in protected period.
+	/// 2. all user could replace low-class items with high-class item. 
+	///    if the classes is the same, high-grade can replace low-grade items.
 	function _equip(
 		uint256 _tokenId,
 		address _resource,
@@ -1316,7 +1321,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		bar.resource = _resource;
 		itemId2Status[bar.token][bar.id] = Status({
 			staker: bar.staker,
-			tokenId: _tokenId,
+			landTokenId: _tokenId,
 			index: _index
 		});
 		if (isNotProtect(bar.token, bar.id)) {
