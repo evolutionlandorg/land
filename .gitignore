@@ -4,4 +4,5 @@ node_modules
 package-lock.json
 .idea
 truffle.js
-contracts-flattener
+waffle.json
+cache
