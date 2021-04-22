@@ -71,7 +71,7 @@ contract LandBaseV2 is DSAuth, ILandBase, SettingIds {
     /**
      * @dev Same with constructor, but is used and called by storage proxy as logic contract.
      */
-    function initializeContract(address _registry, int256 _xLow, int256 _xHigh, int256 _yLow, int256 yHigh) public singletonLockCall {
+    function initializeContract(address _registry, int256 _xLow, int256 _xHigh, int256 _yLow, int256 _yHigh) public singletonLockCall {
         // Ownable constructor
         owner = msg.sender;
         emit LogSetOwner(msg.sender);
@@ -85,7 +85,7 @@ contract LandBaseV2 is DSAuth, ILandBase, SettingIds {
         resourceToken2RateAttrId[registry.addressOf(CONTRACT_FIRE_ERC20_TOKEN)] = 4;
         resourceToken2RateAttrId[registry.addressOf(CONTRACT_SOIL_ERC20_TOKEN)] = 5;
 
-        xLow = _xlow;
+        xLow = _xLow;
         xHigh = _xHigh;
         yLow = _yLow;
         yHigh = _yHigh;

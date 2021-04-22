@@ -6,3 +6,4 @@ package-lock.json
 truffle.js
 waffle.json
 cache
+out
