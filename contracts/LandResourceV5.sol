@@ -11,6 +11,7 @@ import "@evolutionland/common/contracts/interfaces/ITokenUse.sol";
 import "@evolutionland/common/contracts/interfaces/IActivity.sol";
 import "@evolutionland/common/contracts/interfaces/IMinerObject.sol";
 import "./interfaces/ILandBase.sol";
+import "./interfaces/ILandBaseExt.sol";
 import "./interfaces/IMetaDataTeller.sol";
 
 contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
@@ -1267,7 +1268,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		IMetaDataTeller teller =
 			IMetaDataTeller(registry.addressOf(CONTRACT_METADATA_TELLER));
 		uint256 resourceId =
-			ILandBase(registry.addressOf(CONTRACT_LAND_BASE))
+			ILandBaseExt(registry.addressOf(CONTRACT_LAND_BASE))
 				.resourceToken2RateAttrId(_resource);
 		require(resourceId > 0 && resourceId < 6, "Furnace: INVALID_RESOURCE");
 		require(
@@ -1401,7 +1402,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		IMetaDataTeller teller =
 			IMetaDataTeller(registry.addressOf(CONTRACT_METADATA_TELLER));
 		uint256 resourceId =
-			ILandBase(registry.addressOf(CONTRACT_LAND_BASE))
+			ILandBaseExt(registry.addressOf(CONTRACT_LAND_BASE))
 				.resourceToken2RateAttrId(_resource);
 		return teller.getRate(bar.token, bar.id, resourceId);
 	}
