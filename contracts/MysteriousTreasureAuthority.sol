@@ -11,7 +11,7 @@ contract MysteriousTreasureAuthority {
     mapping (address => bool) public whiteList;
 
     function canCall(
-        address _src, address _dst, bytes4 _sig
+        address _src, address /*_dst*/, bytes4 _sig
     ) public view returns (bool) {
         return whiteList[_src];
     }
