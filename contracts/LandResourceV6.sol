@@ -1312,13 +1312,7 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 			index: _index
 		});
 		if (isNotProtect(bar.token, bar.id)) {
-			protectPeriod[bar.token][bar.id] = _calculateProtectPeriod(
-				bar
-					.token,
-				bar
-					.id,
-				class
-			)
+			protectPeriod[bar.token][bar.id] = _calculateProtectPeriod(class)
 				.add(now);
 		}
 		afterEquiped(_index, _tokenId, _resource);
@@ -1326,8 +1320,6 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	}
 
 	function _calculateProtectPeriod(
-		address _token,
-		uint256 _id,
 		uint16 _class
 	) internal view returns (uint256) {
 		uint256 baseProtectPeriod =

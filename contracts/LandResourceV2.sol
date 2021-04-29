@@ -195,7 +195,7 @@ contract LandResourceV2 is SupportsInterfaceWithLookup, DSAuth, IActivity, LandS
         land2ResourceMineState[_landTokenId].mintedBalance[_resourceToken] += minedBalance;
     }
 
-    function _calculateMinedBalance(uint256 _landTokenId, address _resourceToken, uint256 _currentTime) internal returns (uint256) {
+    function _calculateMinedBalance(uint256 _landTokenId, address _resourceToken, uint256 _currentTime) internal view returns (uint256) {
         uint256 currentTime = _currentTime;
 
         uint256 minedBalance;
