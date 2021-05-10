@@ -27,11 +27,6 @@ contract LandBaseV2 is DSAuth, ILandBase, SettingIds {
 
     ISettingsRegistry public registry;
 
-    int256 xLow;
-    int256 xHigh;
-    int256 yLow;
-    int256 yHigh;
-
     /**
      * @dev mapping from resource token address to resource atrribute rate id.
      * atrribute rate id starts from 1 to 16, NAN is 0.
@@ -48,6 +43,11 @@ contract LandBaseV2 is DSAuth, ILandBase, SettingIds {
     mapping (uint256 => uint256) public locationId2TokenId;
 
     uint256 public lastLandObjectId;
+
+    int256 xLow;
+    int256 xHigh;
+    int256 yLow;
+    int256 yHigh;
 
     /*
      *  Modifiers
