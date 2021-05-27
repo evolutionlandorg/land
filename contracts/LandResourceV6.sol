@@ -143,8 +143,8 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		uint256 id
 	);
 
-    event SetMaxLandBar(uint256 maxAmount);
-    event SetMaxMiner(uint256 maxMiners);
+    	event SetMaxLandBar(uint256 maxAmount);
+    	event SetMaxMiner(uint256 maxMiners);
 
 	// 0x434f4e54524143545f4c414e445f424153450000000000000000000000000000
 	bytes32 public constant CONTRACT_LAND_BASE = "CONTRACT_LAND_BASE";
@@ -238,8 +238,8 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		singletonLock = true;
 	}
 
-    // initializeContract be called by proxy contract
-    // see https://blog.openzeppelin.com/the-transparent-proxy-pattern/
+    	// initializeContract be called by proxy contract
+    	// see https://blog.openzeppelin.com/the-transparent-proxy-pattern/
 	function initializeContract(
 		address _registry,
 		uint256 _resourceReleaseStartTime
@@ -253,11 +253,11 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 
 		resourceReleaseStartTime = _resourceReleaseStartTime;
 
-        //see https://github.com/evolutionlandorg/common-contracts/blob/2873a4f8f970bd442ffcf9c6ae63b3dc79e743db/contracts/interfaces/IActivity.sol#L6
+        	//see https://github.com/evolutionlandorg/common-contracts/blob/2873a4f8f970bd442ffcf9c6ae63b3dc79e743db/contracts/interfaces/IActivity.sol#L6
 		_registerInterface(InterfaceId_IActivity);
 
-        maxMiners = 5;
-        maxAmount = 5;
+        	maxMiners = 5;
+        	maxAmount = 5;
 	}
 
 	// get amount of speed uint at this moment
@@ -326,8 +326,8 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 
 	// For every seconds, the speed will decrease by current speed multiplying (DENOMINATOR_in_seconds - seconds) / DENOMINATOR_in_seconds.
 	// resource will decrease 1/10000 every day.
-    // `minableBalance` is an area of a trapezoid.
-    // The reason for dividing by `1 days` twice is that the definition of `getResourceRate` is the number of mines that can be mined per day.
+    	// `minableBalance` is an area of a trapezoid.
+    	// The reason for dividing by `1 days` twice is that the definition of `getResourceRate` is the number of mines that can be mined per day.
 	function _getMinableBalance(
 		uint256 _tokenId,
 		address _resource,
@@ -1258,7 +1258,7 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
         @param _index    Index of the Bar.
         @param _token    Token address which to quip.
         @param _id       Token Id which to quip.
-    */
+    	*/
 	function equip(
 		uint256 _tokenId,
 		address _resource,
@@ -1361,16 +1361,16 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		_stopBarMinig(_index, _landTokenId, _resource);
 	}
 
-    function devestAndClaim(address _itemToken, uint256 _tokenId, uint256 _index) public {
-        divest(_tokenId, _index);
-        claimItemResource(_itemToken, _tokenId);
-    }
+    	function devestAndClaim(address _itemToken, uint256 _tokenId, uint256 _index) public {
+		divest(_tokenId, _index);
+		claimItemResource(_itemToken, _tokenId);
+    	}
 
 	/**
         @dev Divest function, A NFT can Divest from EVO Bar (LandBar or ApostleBar).
         @param _tokenId Token Id which to be unquiped.
         @param _index   Index of the Bar.
-    */
+    	*/
 	function divest(uint256 _tokenId, uint256 _index) public {
 		_divest(_tokenId, _index);
 	}
