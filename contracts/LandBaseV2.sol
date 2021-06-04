@@ -44,10 +44,10 @@ contract LandBaseV2 is DSAuth, ILandBase, SettingIds {
 
     uint256 public lastLandObjectId;
 
-    int256 xLow;
-    int256 xHigh;
-    int256 yLow;
-    int256 yHigh;
+    int256 public xLow;
+    int256 public xHigh;
+    int256 public yLow;
+    int256 public yHigh;
 
     /*
      *  Modifiers
