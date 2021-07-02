@@ -1333,7 +1333,7 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	) internal view returns (uint256) {
 		uint256 baseProtectPeriod =
 			registry.uintOf(UINT_ITEMBAR_PROTECT_PERIOD);
-		return baseProtectPeriod.add(uint256(_class).mul(baseProtectPeriod));
+		return uint256(_class).mul(baseProtectPeriod);
 	}
 
 	function beforeEquip(uint256 _landTokenId, address _resource) internal {
