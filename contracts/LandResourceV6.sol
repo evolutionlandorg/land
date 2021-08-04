@@ -693,13 +693,16 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	}
 
 	function stopMining(uint256 _tokenId) public {
-        if (ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(_tokenId) == msg.sender) {
-            ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).removeActivity(_tokenId, msg.sender);
+        address ownership = registry.addressOf(CONTRACT_OBJECT_OWNERSHIP);
+        address tokenuse = registry.addressOf(CONTRACT_TOKEN_USE);
+        if (ERC721(ownership).ownerOf(_tokenId) == msg.sender) {
+            ITokenUse(tokenuse).removeActivity(_tokenId, msg.sender);
         } else {
             // Land owner has right to stop mining
             uint256 landTokenId = miner2Index[_tokenId].landTokenId;
-            require(msg.sender == ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).ownerOf(landTokenId), "Land: ONLY_LANDER");
-            ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).removeActivity(_tokenId, address(0));
+            require(msg.sender == ERC721(ownership).ownerOf(landTokenId), "Land: ONLY_LANDER");
+            address user = ITokenUse(tokenuse).getTokenUser(_tokenId);
+            ITokenUse(tokenuse).removeActivity(_tokenId, user);
         }
 	}
 
