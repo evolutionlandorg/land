@@ -687,6 +687,14 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		}
 	}
 
+    function batchClaimItemResource(address[] _itemTokens, uint256[] _itemIds) external {
+        require(_itemTokens.length == _itemIds.length, "Land: INVALID_LENGTH");
+        uint256 length = _itemTokens.length;
+        for (uint256 i = 0; i < length; i++) {
+            claimItemResource(_itemTokens[i], _itemIds[i]);
+        }
+    }
+
 	// Only trigger from Token Activity.
 	function activityStopped(uint256 _tokenId) public auth {
 		_stopMining(_tokenId);
