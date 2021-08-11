@@ -701,17 +701,17 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	}
 
 	function stopMining(uint256 _tokenId) public {
-        address ownership = registry.addressOf(CONTRACT_OBJECT_OWNERSHIP);
-        address tokenuse = registry.addressOf(CONTRACT_TOKEN_USE);
-        if (ERC721(ownership).ownerOf(_tokenId) == msg.sender) {
-            ITokenUse(tokenuse).removeActivity(_tokenId, msg.sender);
-        } else {
-            // Land owner has right to stop mining
-            uint256 landTokenId = miner2Index[_tokenId].landTokenId;
-            require(msg.sender == ERC721(ownership).ownerOf(landTokenId), "Land: ONLY_LANDER");
-            address user = ITokenUse(tokenuse).getTokenUser(_tokenId);
-            ITokenUse(tokenuse).removeActivity(_tokenId, user);
-        }
+            address ownership = registry.addressOf(CONTRACT_OBJECT_OWNERSHIP);
+            address tokenuse = registry.addressOf(CONTRACT_TOKEN_USE);
+            if (ERC721(ownership).ownerOf(_tokenId) == msg.sender) {
+                ITokenUse(tokenuse).removeActivity(_tokenId, msg.sender);
+            } else {
+                // Land owner has right to stop mining
+                uint256 landTokenId = miner2Index[_tokenId].landTokenId;
+                require(msg.sender == ERC721(ownership).ownerOf(landTokenId), "Land: ONLY_LANDER");
+                address user = ITokenUse(tokenuse).getTokenUser(_tokenId);
+                ITokenUse(tokenuse).removeActivity(_tokenId, user);
+            }
 	}
 
 	function _stopMining(uint256 _tokenId) internal {
