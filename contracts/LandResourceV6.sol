@@ -703,13 +703,13 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	function stopMining(uint256 _tokenId) public {
             address ownership = registry.addressOf(CONTRACT_OBJECT_OWNERSHIP);
             address tokenuse = registry.addressOf(CONTRACT_TOKEN_USE);
-            if (ERC721(ownership).ownerOf(_tokenId) == msg.sender) {
+            address user = ITokenUse(tokenuse).getTokenUser(_tokenId);
+            if (ERC721(ownership).ownerOf(_tokenId) == msg.sender || user == msg.sender) {
                 ITokenUse(tokenuse).removeActivity(_tokenId, msg.sender);
             } else {
                 // Land owner has right to stop mining
                 uint256 landTokenId = miner2Index[_tokenId].landTokenId;
                 require(msg.sender == ERC721(ownership).ownerOf(landTokenId), "Land: ONLY_LANDER");
-                address user = ITokenUse(tokenuse).getTokenUser(_tokenId);
                 ITokenUse(tokenuse).removeActivity(_tokenId, user);
             }
 	}
@@ -1303,8 +1303,9 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 				registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
 			)
 				.getObjectClass(_tokenId) == 1,
-			"Funace: ONLY_LAND"
+			"Furnace: ONLY_LAND"
 		);
+        require(ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).exists(_tokenId), "Furnace: NOT_EXIST");
 		(uint16 objClassExt, uint16 class, uint16 grade) =
 			teller.getMetaData(_token, _id);
 		require(objClassExt > 0, "Furnace: PERMISSION");
