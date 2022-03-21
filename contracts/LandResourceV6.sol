@@ -194,6 +194,7 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	// rate precision
 	uint128 public constant RATE_PRECISION = 10**8;
 
+	// max land miner amounts
 	uint256 public maxMiners;
 
 	// (itemTokenAddress => (itemTokenId => (resourceAddress => mined balance)))
@@ -204,19 +205,19 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	mapping(uint256 => mapping(address => mapping(uint256 => uint256)))
 		public land2BarRate;
 
-	// land bar
+	// land item bar
 	struct Bar {
-		address staker;
-		address token;
-		uint256 id;
-		address resource;
+		address staker;    // staker who equip item to the land item bar
+		address token;     // item token address of the item which equpped in the land item bar
+		uint256 id;        // item token id
+		address resource;  // which resource staker want to stake
 	}
 
-	// bar status
+	// land item bar status
 	struct Status {
-		address staker;
-		uint256 tokenId;
-		uint256 index;
+		address staker;    // staker who equip item to the land item bar
+		uint256 landTokenId; // land token id which the item equipped
+		uint256 index;     // land item bar slot which the item equipped
 	}
 
 	// max land bar amount
@@ -973,13 +974,13 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		if (barsRate > 0) {
 			uint256 barsBalance = _minedBalance.sub(landBalance);
 			for (uint256 i = 0; i < maxAmount; i++) {
-				uint256 barBalance =
-					barsBalance.mul(getBarRate(_landId, _resource, i)).div(
-						barsRate
-					);
-				(barBalance, landBalance) = _payFee(barBalance, landBalance);
-				(address itemToken, uint256 itemId, ) = getBarItem(_landId, i);
-				if (_itemId == itemId && _itemToken == itemToken) {
+				(address itemToken, uint256 itemId, address resource) = getBarItem(_landId, i);
+				if (_itemId == itemId && _itemToken == itemToken && _resource == resource) {
+					uint256 barBalance =
+						barsBalance.mul(getBarRate(_landId, _resource, i)).div(
+							barsRate
+						);
+					(barBalance, landBalance) = _payFee(barBalance, landBalance);
 					barResource = barResource.add(barBalance);
 				}
 			}
@@ -992,18 +993,20 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	) external view returns (uint256[] memory) {
 		uint256[] memory availables = new uint256[](_resources.length);
 		for (uint256 i = 0; i < _resources.length; i++) {
-			uint256 mined = _calculateMinedBalance(_landId, _resources[i], now);
-			(uint256 available, ) =
-				_calculateResources(
-					address(0),
-					0,
-					_landId,
-					_resources[i],
-					mined
+			if (getLandMiningStrength(_landId, _resources[i]) > 0) {
+				uint256 mined = _calculateMinedBalance(_landId, _resources[i], now);
+				(uint256 available, ) =
+					_calculateResources(
+						address(0),
+						0,
+						_landId,
+						_resources[i],
+						mined
+					);
+				availables[i] = available.add(
+					getLandMinedBalance(_landId, _resources[i])
 				);
-			availables[i] = available.add(
-				getLandMinedBalance(_landId, _resources[i])
-			);
+			}
 		}
 		return availables;
 	}
@@ -1017,24 +1020,26 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		for (uint256 i = 0; i < _resources.length; i++) {
 			(address staker, uint256 landId) =
 				getLandIdByItem(_itemToken, _itemId);
-			uint256 available = 0;
-			if (staker != address(0) && landId != 0) {
-				uint256 mined =
-					_calculateMinedBalance(landId, _resources[i], now);
-				(, uint256 availableItem) =
-					_calculateResources(
-						_itemToken,
-						_itemId,
-						landId,
-						_resources[i],
-						mined
-					);
-				available = available.add(availableItem);
+			if (getLandMiningStrength(landId, _resources[i]) > 0) {
+				uint256 available = 0;
+				if (staker != address(0) && landId != 0) {
+					uint256 mined =
+						_calculateMinedBalance(landId, _resources[i], now);
+					(, uint256 availableItem) =
+						_calculateResources(
+							_itemToken,
+							_itemId,
+							landId,
+							_resources[i],
+							mined
+						);
+					available = available.add(availableItem);
+				}
+				available = available.add(
+					getItemMinedBalance(_itemToken, _itemId, _resources[i])
+				);
+				availables[i] = available;
 			}
-			available = available.add(
-				getItemMinedBalance(_itemToken, _itemId, _resources[i])
-			);
-			availables[i] = available;
 		}
 		return availables;
 	}
@@ -1071,7 +1076,7 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	{
 		return (
 			itemId2Status[_item][_itemId].staker,
-			itemId2Status[_item][_itemId].tokenId
+			itemId2Status[_item][_itemId].landTokenId
 		);
 	}
 
@@ -1093,6 +1098,10 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		_equip(_tokenId, _resource, _index, _token, _id);
 	}
 
+	/// equip rules:
+	/// 1. land owner could replace item which is not in protected period.
+	/// 2. all user could replace low-class items with high-class item. 
+	///    if the classes is the same, high-grade can replace low-grade items.
 	function _equip(
 		uint256 _tokenId,
 		address _resource,
@@ -1151,12 +1160,11 @@ contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		bar.resource = _resource;
 		itemId2Status[bar.token][bar.id] = Status({
 			staker: bar.staker,
-			tokenId: _tokenId,
+			landTokenId: _tokenId,
 			index: _index
 		});
 		if (isNotProtect(bar.token, bar.id)) {
-			protectPeriod[bar.token][bar.id] = _calculateProtectPeriod(class)
-				.add(now);
+			protectPeriod[bar.token][bar.id] = _calculateProtectPeriod(class).add(now);
 		}
 		afterEquiped(_index, _tokenId, _resource);
 		emit Equip(_tokenId, _resource, _index, bar.staker, bar.token, bar.id);
