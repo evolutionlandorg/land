@@ -31,5 +31,4 @@ contract ILandBase {
 
     function setFlagMask(uint _landTokenId, uint256 _newFlagMask) public;
 
-    function resourceToken2RateAttrId(address _resourceToken) external view returns (uint256);
 }

@@ -11,7 +11,7 @@ contract LandBaseAuthority {
     mapping (address => bool) public whiteList;
 
     function canCall(
-        address _src, address _dst, bytes4 _sig
+        address _src, address /*_dst*/, bytes4 _sig
     ) public view returns (bool) {
         return ( whiteList[_src] && _sig == bytes4(keccak256("setResourceRateAttr(uint256,uint256)")) ) ||
                ( whiteList[_src] && _sig == bytes4(keccak256("setResourceRate(uint256,address,uint16)")) ) ||

@@ -14,7 +14,8 @@ import "./interfaces/ILandBase.sol";
 import "./interfaces/ILandBaseExt.sol";
 import "./interfaces/IMetaDataTeller.sol";
 
-contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
+// DSAuth see https://github.com/evolutionlandorg/common-contracts/blob/2873a4f8f970bd442ffcf9c6ae63b3dc79e743db/contracts/DSAuth.sol#L40
+contract LandResourceV6 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	using SafeMath for *;
 
 	// For every seconds, the speed will decrease by current speed multiplying (DENOMINATOR_in_seconds - seconds) / DENOMINATOR_in_seconds
@@ -142,6 +143,9 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		uint256 id
 	);
 
+    	event SetMaxLandBar(uint256 maxAmount);
+    	event SetMaxMiner(uint256 maxMiners);
+
 	// 0x434f4e54524143545f4c414e445f424153450000000000000000000000000000
 	bytes32 public constant CONTRACT_LAND_BASE = "CONTRACT_LAND_BASE";
 
@@ -235,10 +239,13 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		singletonLock = true;
 	}
 
+	// initializeContract be called by proxy contract
+	// see https://blog.openzeppelin.com/the-transparent-proxy-pattern/
 	function initializeContract(
 		address _registry,
 		uint256 _resourceReleaseStartTime
 	) public singletonLockCall {
+        require(_registry!= address(0), "_registry is a zero value");
 		// Ownable constructor
 		owner = msg.sender;
 		emit LogSetOwner(msg.sender);
@@ -247,7 +254,11 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 
 		resourceReleaseStartTime = _resourceReleaseStartTime;
 
+	//see https://github.com/evolutionlandorg/common-contracts/blob/2873a4f8f970bd442ffcf9c6ae63b3dc79e743db/contracts/interfaces/IActivity.sol#L6
 		_registerInterface(InterfaceId_IActivity);
+
+        maxMiners = 5;
+        maxAmount = 5;
 	}
 
 	// get amount of speed uint at this moment
@@ -273,32 +284,6 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		uint256 availableSpeedInSeconds =
 			TOTAL_SECONDS.sub(_time - resourceReleaseStartTime);
 		return availableSpeedInSeconds;
-		// // time from last update
-		// uint256 timeBetween =
-		// 	_time - land2ResourceMineState[_tokenId].lastUpdateTime;
-
-		// // the recover speed is 20/10000, 20 times.
-		// // recoveryRate overall from lasUpdateTime til now + amount of speed uint at lastUpdateTime
-		// uint256 nextSpeedInSeconds =
-		// 	land2ResourceMineState[_tokenId].lastUpdateSpeedInSeconds +
-		// 		timeBetween *
-		// 		recoverAttenPerDay;
-		// // destroyRate overall from lasUpdateTime til now amount of speed uint at lastUpdateTime
-		// uint256 destroyedSpeedInSeconds =
-		// 	timeBetween *
-		// 		land2ResourceMineState[_tokenId].lastDestoryAttenInSeconds;
-
-		// if (nextSpeedInSeconds < destroyedSpeedInSeconds) {
-		// 	nextSpeedInSeconds = 0;
-		// } else {
-		// 	nextSpeedInSeconds = nextSpeedInSeconds - destroyedSpeedInSeconds;
-		// }
-
-		// if (nextSpeedInSeconds > availableSpeedInSeconds) {
-		// 	nextSpeedInSeconds = availableSpeedInSeconds;
-		// }
-
-		// return nextSpeedInSeconds;
 	}
 
 	function getReleaseSpeed(
@@ -314,6 +299,10 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 				.div(TOTAL_SECONDS);
 	}
 
+	// For every seconds, the speed will decrease by current speed multiplying (DENOMINATOR_in_seconds - seconds) / DENOMINATOR_in_seconds.
+	// resource will decrease 1/10000 every day.
+	// `minableBalance` is an area of a trapezoid.
+	// The reason for dividing by `1 days` twice is that the definition of `getResourceRate` is the number of mines that can be mined per day.
 	function _getMinableBalance(
 		uint256 _tokenId,
 		address _resource,
@@ -355,6 +344,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	function setMaxMiners(uint256 _maxMiners) public auth {
 		require(_maxMiners > maxMiners, "Land: INVALID_MAXMINERS");
 		maxMiners = _maxMiners;
+        emit SetMaxMiner(maxMiners);
 	}
 
 	function mine(uint256 _landTokenId) public {
@@ -384,27 +374,11 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 			"Token must be land."
 		);
 
-		// v5 remove
-		// if (land2ResourceMineState[_landTokenId].lastUpdateTime == 0) {
-		// 	land2ResourceMineState[_landTokenId].lastUpdateTime = uint128(
-		// 		resourceReleaseStartTime
-		// 	);
-		// 	land2ResourceMineState[_landTokenId]
-		// 		.lastUpdateSpeedInSeconds = TOTAL_SECONDS;
-		// }
-
 		_mineResource(_landTokenId, _gold);
 		_mineResource(_landTokenId, _wood);
 		_mineResource(_landTokenId, _water);
 		_mineResource(_landTokenId, _fire);
 		_mineResource(_landTokenId, _soil);
-
-		// v5 remove
-		// land2ResourceMineState[_landTokenId]
-		// 	.lastUpdateSpeedInSeconds = _getReleaseSpeedInSeconds(
-		// 	_landTokenId,
-		// 	now
-		// );
 
 		land2ResourceMineState[_landTokenId].lastUpdateTime = uint128(now);
 	}
@@ -492,7 +466,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 
 		uint256 lastUpdateTime =
 			land2ResourceMineState[_landTokenId].lastUpdateTime;
-		require(currentTime >= lastUpdateTime);
+		require(currentTime >= lastUpdateTime, "Land: INVALID_TIMESTAMP");
 
 		if (lastUpdateTime >= (resourceReleaseStartTime + TOTAL_SECONDS)) {
 			minedBalance = 0;
@@ -514,76 +488,10 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 
 		if (minedBalance > minableBalance) {
 			minedBalance = minableBalance;
-		}
+		} 
 
 		return minedBalance;
 	}
-
-	// v5 remove
-	// function claimAllResource(uint256 _landTokenId) public {
-	// 	require(
-	// 		msg.sender == ownership.ownerOf(_landTokenId),
-	// 		"Must be the owner of the land"
-	// 	);
-
-	// 	_mineAllResource(_landTokenId, gold, wood, water, fire, soil);
-
-	// 	uint256 goldBalance;
-	// 	uint256 woodBalance;
-	// 	uint256 waterBalance;
-	// 	uint256 fireBalance;
-	// 	uint256 soilBalance;
-
-	// 	if (land2ResourceMineState[_landTokenId].mintedBalance[gold] > 0) {
-	// 		goldBalance = land2ResourceMineState[_landTokenId].mintedBalance[
-	// 			gold
-	// 		];
-	// 		IMintableERC20(gold).mint(msg.sender, goldBalance);
-	// 		land2ResourceMineState[_landTokenId].mintedBalance[gold] = 0;
-	// 	}
-
-	// 	if (land2ResourceMineState[_landTokenId].mintedBalance[wood] > 0) {
-	// 		woodBalance = land2ResourceMineState[_landTokenId].mintedBalance[
-	// 			wood
-	// 		];
-	// 		IMintableERC20(wood).mint(msg.sender, woodBalance);
-	// 		land2ResourceMineState[_landTokenId].mintedBalance[wood] = 0;
-	// 	}
-
-	// 	if (land2ResourceMineState[_landTokenId].mintedBalance[water] > 0) {
-	// 		waterBalance = land2ResourceMineState[_landTokenId].mintedBalance[
-	// 			water
-	// 		];
-	// 		IMintableERC20(water).mint(msg.sender, waterBalance);
-	// 		land2ResourceMineState[_landTokenId].mintedBalance[water] = 0;
-	// 	}
-
-	// 	if (land2ResourceMineState[_landTokenId].mintedBalance[fire] > 0) {
-	// 		fireBalance = land2ResourceMineState[_landTokenId].mintedBalance[
-	// 			fire
-	// 		];
-	// 		IMintableERC20(fire).mint(msg.sender, fireBalance);
-	// 		land2ResourceMineState[_landTokenId].mintedBalance[fire] = 0;
-	// 	}
-
-	// 	if (land2ResourceMineState[_landTokenId].mintedBalance[soil] > 0) {
-	// 		soilBalance = land2ResourceMineState[_landTokenId].mintedBalance[
-	// 			soil
-	// 		];
-	// 		IMintableERC20(soil).mint(msg.sender, soilBalance);
-	// 		land2ResourceMineState[_landTokenId].mintedBalance[soil] = 0;
-	// 	}
-
-	// 	emit ResourceClaimed(
-	// 		msg.sender,
-	// 		_landTokenId,
-	// 		goldBalance,
-	// 		woodBalance,
-	// 		waterBalance,
-	// 		fireBalance,
-	// 		soilBalance
-	// 	);
-	// }
 
 	// both for own _tokenId or hired one
 	function startMining(
@@ -591,12 +499,6 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		uint256 _landTokenId,
 		address _resource
 	) public {
-		ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).addActivity(
-			_tokenId,
-			msg.sender,
-			0
-		);
-
 		// require the permission from land owner;
 		require(
 			msg.sender ==
@@ -609,6 +511,12 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		// make sure that _tokenId won't be used repeatedly
 		require(miner2Index[_tokenId].landTokenId == 0);
 
+		ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).addActivity(
+			_tokenId,
+			msg.sender,
+			0
+		);
+
 		// update status!
 		mine(_landTokenId);
 
@@ -616,11 +524,6 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 			land2ResourceMineState[_landTokenId].miners[_resource].length;
 
 		land2ResourceMineState[_landTokenId].totalMiners += 1;
-
-		// v5 remove
-		// if (land2ResourceMineState[_landTokenId].maxMiners == 0) {
-		// 	land2ResourceMineState[_landTokenId].maxMiners = 5;
-		// }
 
 		require(
 			land2ResourceMineState[_landTokenId].totalMiners <= maxMiners,
@@ -636,9 +539,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 			IMinerObject(miner).strengthOf(_tokenId, _resource, _landTokenId);
 
 		land2ResourceMineState[_landTokenId].miners[_resource].push(_tokenId);
-		land2ResourceMineState[_landTokenId].totalMinerStrength[
-			_resource
-		] += strength;
+		land2ResourceMineState[_landTokenId].totalMinerStrength[_resource] = land2ResourceMineState[_landTokenId].totalMinerStrength[_resource].add(strength);
 
 		miner2Index[_tokenId] = MinerStatus({
 			landTokenId: _landTokenId,
@@ -653,7 +554,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		uint256[] _tokenIds,
 		uint256[] _landTokenIds,
 		address[] _resources
-	) public {
+	) external {
 		require(
 			_tokenIds.length == _landTokenIds.length &&
 				_landTokenIds.length == _resources.length,
@@ -666,7 +567,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		}
 	}
 
-	function batchClaimLandResource(uint256[] _landTokenIds) public {
+	function batchClaimLandResource(uint256[] _landTokenIds) external {
 		uint256 length = _landTokenIds.length;
 
 		for (uint256 i = 0; i < length; i++) {
@@ -674,16 +575,31 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		}
 	}
 
+        function batchClaimItemResource(address[] _itemTokens, uint256[] _itemIds) external {
+            require(_itemTokens.length == _itemIds.length, "Land: INVALID_LENGTH");
+            uint256 length = _itemTokens.length;
+            for (uint256 i = 0; i < length; i++) {
+                claimItemResource(_itemTokens[i], _itemIds[i]);
+            }
+        }
+
 	// Only trigger from Token Activity.
 	function activityStopped(uint256 _tokenId) public auth {
 		_stopMining(_tokenId);
 	}
 
 	function stopMining(uint256 _tokenId) public {
-		ITokenUse(registry.addressOf(CONTRACT_TOKEN_USE)).removeActivity(
-			_tokenId,
-			msg.sender
-		);
+            address ownership = registry.addressOf(CONTRACT_OBJECT_OWNERSHIP);
+            address tokenuse = registry.addressOf(CONTRACT_TOKEN_USE);
+            address user = ITokenUse(tokenuse).getTokenUser(_tokenId);
+            if (ERC721(ownership).ownerOf(_tokenId) == msg.sender || user == msg.sender) {
+                ITokenUse(tokenuse).removeActivity(_tokenId, msg.sender);
+            } else {
+                // Land owner has right to stop mining
+                uint256 landTokenId = miner2Index[_tokenId].landTokenId;
+                require(msg.sender == ERC721(ownership).ownerOf(landTokenId), "Land: ONLY_LANDER");
+                ITokenUse(tokenuse).removeActivity(_tokenId, user);
+            }
 	}
 
 	function _stopMining(uint256 _tokenId) internal {
@@ -713,7 +629,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 			lastMinerIndex
 		] = 0;
 
-		land2ResourceMineState[landTokenId].miners[resource].length -= 1;
+		land2ResourceMineState[landTokenId].miners[resource].length = land2ResourceMineState[landTokenId].miners[resource].length.sub(1);
 		miner2Index[lastMiner].indexInResource = minerIndex;
 
 		land2ResourceMineState[landTokenId].totalMiners -= 1;
@@ -761,151 +677,71 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		emit StopMining(_tokenId, landTokenId, resource, strength);
 	}
 
-	// v5 remove
-	// function getMinerOnLand(
-	// 	uint256 _landTokenId,
-	// 	address _resourceToken,
-	// 	uint256 _index
-	// ) public view returns (uint256) {
-	// 	return
-	// 		land2ResourceMineState[_landTokenId].miners[_resourceToken][_index];
-	// }
-
-	// function getTotalMiningStrength(
-	// 	uint256 _landTokenId,
-	// 	address _resourceToken
-	// ) public view returns (uint256) {
-	// 	return
-	// 		land2ResourceMineState[_landTokenId].totalMinerStrength[
-	// 			_resourceToken
-	// 		];
-	// }
-
-	// function availableResources(
-	// 	uint256 _landTokenId,
-	// 	address[5] _resourceTokens
-	// )
-	// 	public
-	// 	view
-	// 	returns (
-	// 		uint256,
-	// 		uint256,
-	// 		uint256,
-	// 		uint256,
-	// 		uint256
-	// 	)
+	// function _updateMinerStrength(uint256 _apostleTokenId, bool _isStop)
+	// 	internal
+	// 	returns (uint256, uint256)
 	// {
-	// 	uint256 availableGold =
-	// 		_calculateMinedBalance(_landTokenId, _resourceTokens[0], now) +
-	// 			land2ResourceMineState[_landTokenId].mintedBalance[
-	// 				_resourceTokens[0]
-	// 			];
-	// 	uint256 availableWood =
-	// 		_calculateMinedBalance(_landTokenId, _resourceTokens[1], now) +
-	// 			land2ResourceMineState[_landTokenId].mintedBalance[
-	// 				_resourceTokens[1]
-	// 			];
-	// 	uint256 availableWater =
-	// 		_calculateMinedBalance(_landTokenId, _resourceTokens[2], now) +
-	// 			land2ResourceMineState[_landTokenId].mintedBalance[
-	// 				_resourceTokens[2]
-	// 			];
-	// 	uint256 availableFire =
-	// 		_calculateMinedBalance(_landTokenId, _resourceTokens[3], now) +
-	// 			land2ResourceMineState[_landTokenId].mintedBalance[
-	// 				_resourceTokens[3]
-	// 			];
-	// 	uint256 availableSoil =
-	// 		_calculateMinedBalance(_landTokenId, _resourceTokens[4], now) +
-	// 			land2ResourceMineState[_landTokenId].mintedBalance[
-	// 				_resourceTokens[4]
-	// 			];
+	// 	// require that this apostle
+	// 	uint256 landTokenId = landWorkingOn(_apostleTokenId);
+	// 	require(landTokenId != 0, "this apostle is not mining.");
 
-	// 	return (
-	// 		availableGold,
-	// 		availableWood,
-	// 		availableWater,
-	// 		availableFire,
-	// 		availableSoil
+	// 	address resource = miner2Index[_apostleTokenId].resource;
+
+	// 	address miner =
+	// 		IInterstellarEncoder(
+	// 			registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
+	// 		)
+	// 			.getObjectAddress(_apostleTokenId);
+	// 	uint256 strength =
+	// 		IMinerObject(miner).strengthOf(
+	// 			_apostleTokenId,
+	// 			resource,
+	// 			landTokenId
+	// 		);
+
+	// 	mine(landTokenId);
+
+	// 	if (_isStop) {
+	// 		land2ResourceMineState[landTokenId].totalMinerStrength[
+	// 			resource
+	// 		] = land2ResourceMineState[landTokenId].totalMinerStrength[resource]
+	// 			.sub(strength);
+	// 	} else {
+	// 		land2ResourceMineState[landTokenId].totalMinerStrength[resource] = land2ResourceMineState[landTokenId].totalMinerStrength[resource].add(strength);
+	// 	}
+
+	// 	return (landTokenId, strength);
+	// }
+
+	// // when a mirrorToken or a pet has tied to apostle
+	// // we need to update status and remove this apostle from mining list first
+	// // open authority to PetBase
+	// // can only be called by PetBase
+	// function updateMinerStrengthWhenStop(uint256 _apostleTokenId) public auth {
+	// 	uint256 landTokenId;
+	// 	uint256 strength;
+	// 	(landTokenId, strength) = _updateMinerStrength(_apostleTokenId, true);
+	// 	// _isStop == true - minus strength
+	// 	// _isStop == false - add strength
+	// 	emit UpdateMiningStrengthWhenStop(
+	// 		_apostleTokenId,
+	// 		landTokenId,
+	// 		strength
 	// 	);
 	// }
 
-	// V5 remove
-	// function mintedBalanceOnLand(uint256 _landTokenId, address _resourceToken) public view returns (uint256) {
-	//     return land2ResourceMineState[_landTokenId].mintedBalance[_resourceToken];
+	// function updateMinerStrengthWhenStart(uint256 _apostleTokenId) public auth {
+	// 	uint256 landTokenId;
+	// 	uint256 strength;
+	// 	(landTokenId, strength) = _updateMinerStrength(_apostleTokenId, false);
+	// 	// _isStop == true - minus strength
+	// 	// _isStop == false - add strength
+	// 	emit UpdateMiningStrengthWhenStart(
+	// 		_apostleTokenId,
+	// 		landTokenId,
+	// 		strength
+	// 	);
 	// }
-
-	// function landWorkingOn(uint256 _apostleTokenId) public view returns (uint256 landTokenId) {
-	//     landTokenId = miner2Index[_apostleTokenId].landTokenId;
-	// }
-
-	function _updateMinerStrength(uint256 _apostleTokenId, bool _isStop)
-		internal
-		returns (uint256, uint256)
-	{
-		// require that this apostle
-		uint256 landTokenId = landWorkingOn(_apostleTokenId);
-		require(landTokenId != 0, "this apostle is not mining.");
-
-		address resource = miner2Index[_apostleTokenId].resource;
-
-		address miner =
-			IInterstellarEncoder(
-				registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
-			)
-				.getObjectAddress(_apostleTokenId);
-		uint256 strength =
-			IMinerObject(miner).strengthOf(
-				_apostleTokenId,
-				resource,
-				landTokenId
-			);
-
-		mine(landTokenId);
-
-		if (_isStop) {
-			land2ResourceMineState[landTokenId].totalMinerStrength[
-				resource
-			] = land2ResourceMineState[landTokenId].totalMinerStrength[resource]
-				.sub(strength);
-		} else {
-			land2ResourceMineState[landTokenId].totalMinerStrength[
-				resource
-			] += strength;
-		}
-
-		return (landTokenId, strength);
-	}
-
-	// when a mirrorToken or a pet has tied to apostle
-	// we need to update status and remove this apostle from mining list first
-	// open authority to PetBase
-	// can only be called by PetBase
-	function updateMinerStrengthWhenStop(uint256 _apostleTokenId) public auth {
-		uint256 landTokenId;
-		uint256 strength;
-		(landTokenId, strength) = _updateMinerStrength(_apostleTokenId, true);
-		// _isStop == true - minus strength
-		// _isStop == false - add strength
-		emit UpdateMiningStrengthWhenStop(
-			_apostleTokenId,
-			landTokenId,
-			strength
-		);
-	}
-
-	function updateMinerStrengthWhenStart(uint256 _apostleTokenId) public auth {
-		uint256 landTokenId;
-		uint256 strength;
-		(landTokenId, strength) = _updateMinerStrength(_apostleTokenId, false);
-		// _isStop == true - minus strength
-		// _isStop == false - add strength
-		emit UpdateMiningStrengthWhenStart(
-			_apostleTokenId,
-			landTokenId,
-			strength
-		);
-	}
 
 	// V5 add
 	function getLandMinedBalance(uint256 _landId, address _resource)
@@ -1046,7 +882,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		if (staker == address(0) && landId == 0) {
 			require(
 				ERC721(_itemToken).ownerOf(_itemId) == msg.sender,
-				"Land: ONLY_ITEM_ONWER"
+				"Land: ONLY_ITEM_OWNER"
 			);
 		} else {
 			require(staker == msg.sender, "Land: ONLY_ITEM_STAKER");
@@ -1153,8 +989,8 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 
 	function availableLandResources(
 		uint256 _landId,
-		address[] memory _resources
-	) public view returns (uint256[] memory) {
+		address[] _resources
+	) external view returns (uint256[] memory) {
 		uint256[] memory availables = new uint256[](_resources.length);
 		for (uint256 i = 0; i < _resources.length; i++) {
 			if (getLandMiningStrength(_landId, _resources[i]) > 0) {
@@ -1178,8 +1014,8 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	function availableItemResources(
 		address _itemToken,
 		uint256 _itemId,
-		address[] memory _resources
-	) public view returns (uint256[] memory) {
+		address[] _resources
+	) external view returns (uint256[] memory) {
 		uint256[] memory availables = new uint256[](_resources.length);
 		for (uint256 i = 0; i < _resources.length; i++) {
 			(address staker, uint256 landId) =
@@ -1251,7 +1087,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
         @param _index    Index of the Bar.
         @param _token    Token address which to quip.
         @param _id       Token Id which to quip.
-    */
+    	*/
 	function equip(
 		uint256 _tokenId,
 		address _resource,
@@ -1285,8 +1121,9 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 				registry.addressOf(CONTRACT_INTERSTELLAR_ENCODER)
 			)
 				.getObjectClass(_tokenId) == 1,
-			"Funace: ONLY_LAND"
+			"Furnace: ONLY_LAND"
 		);
+        require(ERC721(registry.addressOf(CONTRACT_OBJECT_OWNERSHIP)).exists(_tokenId), "Furnace: NOT_EXIST");
 		(uint16 objClassExt, uint16 class, uint16 grade) =
 			teller.getMetaData(_token, _id);
 		require(objClassExt > 0, "Furnace: PERMISSION");
@@ -1306,14 +1143,15 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 			);
 			//TODO:: safe transfer
 			ERC721(bar.token).transferFrom(address(this), bar.staker, bar.id);
-			emit Divest(
-				_tokenId,
-				bar.resource,
-				_index,
-				bar.staker,
-				bar.token,
-				bar.id
-			);
+            delete itemId2Status[bar.staker][bar.id];
+            // emit Divest(
+            //     _tokenId,
+            //     bar.resource,
+            //     _index,
+            //     bar.staker,
+            //     bar.token,
+            //     bar.id
+            // );
 		}
 		ERC721(_token).transferFrom(msg.sender, address(this), _id);
 		bar.staker = msg.sender;
@@ -1337,7 +1175,7 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	) internal view returns (uint256) {
 		uint256 baseProtectPeriod =
 			registry.uintOf(UINT_ITEMBAR_PROTECT_PERIOD);
-		return baseProtectPeriod.add(uint256(_class).mul(baseProtectPeriod));
+		return uint256(_class).mul(baseProtectPeriod);
 	}
 
 	function beforeEquip(uint256 _landTokenId, address _resource) internal {
@@ -1365,11 +1203,16 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 		_stopBarMinig(_index, _landTokenId, _resource);
 	}
 
+    	function devestAndClaim(address _itemToken, uint256 _tokenId, uint256 _index) public {
+		divest(_tokenId, _index);
+		claimItemResource(_itemToken, _tokenId);
+    	}
+
 	/**
         @dev Divest function, A NFT can Divest from EVO Bar (LandBar or ApostleBar).
         @param _tokenId Token Id which to be unquiped.
         @param _index   Index of the Bar.
-    */
+    	*/
 	function divest(uint256 _tokenId, uint256 _index) public {
 		_divest(_tokenId, _index);
 	}
@@ -1394,8 +1237,9 @@ contract LandResourceV5 is SupportsInterfaceWithLookup, DSAuth, IActivity {
 	}
 
 	function setMaxAmount(uint256 _maxAmount) public auth {
-		require(_maxAmount > maxAmount, "Furnace: INVALID_MAXAMOUNT");
-		maxAmount = _maxAmount;
+        require(_maxAmount > maxAmount, "Furnace: INVALID_MAXAMOUNT");
+        maxAmount = _maxAmount;
+        emit SetMaxLandBar(maxAmount);
 	}
 
 	function enhanceStrengthRateByIndex(
